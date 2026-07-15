@@ -125,8 +125,11 @@
     const startUpload = () => {
       const uploaded = picked.filter(isSupported); if (!uploaded.length) return;
       uploading = true; let percent = 8;
-      const stages = ['读取文件并保留原结构', 'AI 自动打标签', '抽取知识点与生成摘要', '建立关联与图谱'];
-      const drawProgress = () => { const active = percent < 42 ? 0 : percent < 68 ? 1 : percent < 88 ? 2 : 3; content.innerHTML = `<h3>上传文件</h3><p>正在导入 ${uploaded.length} 个文件，请勿关闭页面。</p><div class="fx-upload-progress"><strong>${percent}%</strong><div class="fx-progress-line"><span style="width:${percent}%"></span></div><div class="fx-progress-steps">${stages.map((stage, index) => `<div class="${index === active ? 'active' : index < active ? 'done' : ''}"><b>0${index + 1}</b><section><h4>${stage}</h4><p>${index === 0 ? `已读取 ${Math.max(1, Math.round(uploaded.length * percent / 100))}/${uploaded.length} 个文件…` : index === 1 ? '基于文件名、内容关键词识别分类' : index === 2 ? 'PDF/PPT 抽目录，图片做 OCR' : '同主题文件互相关联，准备好关联推荐'}</p></section><em>${index < active ? '已完成' : index === active ? '进行中' : '等待中'}</em></div>`).join('')}</div></div>`; };
+      const drawProgress = () => {
+        const completed = Math.min(uploaded.length, Math.floor(uploaded.length * percent / 100));
+        const current = uploaded[Math.min(uploaded.length - 1, completed)]?.name || uploaded[0].name;
+        content.innerHTML = `<h3>上传文件</h3><p>正在上传 ${uploaded.length} 个文件，请勿关闭页面。</p><div class="fx-upload-progress fx-upload-simple-progress"><strong>${percent}%</strong><div class="fx-progress-line"><span style="width:${percent}%"></span></div><div class="fx-upload-progress-meta"><span>正在上传：${current}</span><b>已上传 ${completed}/${uploaded.length} 个文件</b></div></div>`;
+      };
       drawProgress(); timer = setInterval(() => { percent = Math.min(100, percent + 12); if (percent >= 100) { clearInterval(timer); finishUpload(); } else drawProgress(); }, 520);
     };
     const inputFile = dialog.querySelector('[data-file-input]'), inputFolder = dialog.querySelector('[data-folder-input]');
