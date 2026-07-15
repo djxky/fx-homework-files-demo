@@ -141,8 +141,8 @@
     renderSelect(); shell.append(dialog);
   }
   function distribute(shell, name) {
-    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask'; dialog.innerHTML = `<div class="fx-dialog"><h3>布置到墨水屏</h3><p>选择接收资料的班级，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-class"><input type="checkbox" checked> 初二（3）班　42 人 · 已绑定墨水屏 39 台</label><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm>确认布置</button></div></div>`;
-    dialog.querySelector('[data-close]').onclick = () => dialog.remove(); dialog.querySelector('[data-confirm]').onclick = () => { dialog.remove(); showToast(shell,'已布置到初二（3）班的墨水屏'); }; shell.append(dialog);
+    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask'; dialog.innerHTML = `<div class="fx-dialog"><h3>发布到墨水屏</h3><p>选择要发布资料的班级，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-class"><input type="checkbox" checked> 初二（3）班　42 人 · 已绑定墨水屏 39 台</label><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm>确认发布</button></div></div>`;
+    dialog.querySelector('[data-close]').onclick = () => dialog.remove(); dialog.querySelector('[data-confirm]').onclick = () => { dialog.remove(); showToast(shell,'已发布到初二（3）班的墨水屏'); }; shell.append(dialog);
   }
   function openRowMenu(shell, state, render, query, hasBlockedReview, event, type, id) {
     document.querySelector('.fx-row-menu')?.remove();
@@ -152,7 +152,7 @@
     const reviewBlocked = type === 'folder' ? hasBlockedReview(id) : ['reviewing', 'failed'].includes(item.auditStatus);
     const canDistribute = type === 'file' && !reviewBlocked;
     menu.className = 'fx-row-menu'; menu.style.top = `${rect.bottom + 4}px`; menu.style.left = `${rect.right - 172}px`;
-    menu.innerHTML = `${canDistribute ? '<button data-distribute>布置到墨水屏</button><div class="fx-row-menu-divider"></div>' : reviewBlocked && type === 'file' ? '<div class="fx-row-menu-hint">审核未通过，暂不可布置</div><div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
+    menu.innerHTML = `${canDistribute ? '<button data-distribute>发布到墨水屏</button><div class="fx-row-menu-divider"></div>' : reviewBlocked && type === 'file' ? '<div class="fx-row-menu-hint">审核未通过，暂不可发布</div><div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
     menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, item.name); });
     menu.querySelector('[data-move]').onclick = () => { menu.remove(); moveItem(shell, state, render, query, type, id); };
     menu.querySelector('[data-rename]').onclick = () => {
