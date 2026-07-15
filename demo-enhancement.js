@@ -141,8 +141,40 @@
     renderSelect(); shell.append(dialog);
   }
   function distribute(shell, name) {
-    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask'; dialog.innerHTML = `<div class="fx-dialog"><h3>发布到墨水屏</h3><p>选择要发布资料的班级，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-class"><input type="checkbox" checked> 初二（3）班　42 人 · 已绑定墨水屏 39 台</label><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm>确认发布</button></div></div>`;
-    dialog.querySelector('[data-close]').onclick = () => dialog.remove(); dialog.querySelector('[data-confirm]').onclick = () => { dialog.remove(); showToast(shell,'已发布到初二（3）班的墨水屏'); }; shell.append(dialog);
+    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
+    const students = [
+      { id:'s1', name:'张小雨', group:'初二（3）班' }, { id:'s2', name:'李明哲', group:'初二（3）班' },
+      { id:'s3', name:'王思涵', group:'初二（3）班' }, { id:'s4', name:'陈子轩', group:'初二（3）班' },
+      { id:'s5', name:'周语桐', group:'初二（3）班' }, { id:'s6', name:'刘嘉乐', group:'初二（3）班' }
+    ];
+    const selected = new Set(); let subject = '';
+    const selectedStudents = () => students.filter(item => selected.has(item.id));
+    const renderPublish = () => {
+      const names = selectedStudents();
+      dialog.innerHTML = `<div class="fx-dialog fx-publish-modal"><h3>发布到墨水屏</h3><p>选择学科和接收学生，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-publish-field"><span>学科 <b>*</b></span><select data-subject><option value="">请选择学科</option>${['语文','数学','英语','物理','化学','生物','其他'].map(item => `<option value="${item}" ${subject === item ? 'selected' : ''}>${item}</option>`).join('')}</select></label><div class="fx-publish-field"><span>选择学生 <b>*</b></span><button class="fx-student-trigger ${names.length ? 'has-value' : ''}" data-students>${names.length ? `已选择 ${names.length} 位学生` : '请选择学生'} <i>＋</i></button></div><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm ${subject && names.length ? '' : 'disabled'}>确认发布</button></div></div>`;
+      dialog.querySelector('[data-close]').onclick = () => dialog.remove();
+      dialog.querySelector('[data-subject]').onchange = event => { subject = event.target.value; renderPublish(); };
+      dialog.querySelector('[data-students]').onclick = openStudentPicker;
+      dialog.querySelector('[data-confirm]').onclick = () => {
+        if (!subject || !names.length) return;
+        dialog.remove(); showToast(shell, `已发布给 ${names.length} 名学生（${subject}）`);
+      };
+    };
+    const openStudentPicker = () => {
+      const picker = document.createElement('div'); picker.className = 'fx-student-picker'; let keyword = '';
+      const renderPicker = () => {
+        const visible = students.filter(item => item.name.includes(keyword));
+        picker.innerHTML = `<div class="fx-student-panel"><header><h3>选择学生</h3><button data-close>×</button></header><div class="fx-student-body"><section><input class="fx-student-search" data-search placeholder="输入姓名搜索" value="${keyword}"><div class="fx-student-tabs"><button class="active">教学班</button><button>行政班</button></div><label class="fx-student-all"><input type="checkbox" data-all ${visible.length && visible.every(item => selected.has(item.id)) ? 'checked' : ''}> 初二（3）班 <em>${students.length} 人</em></label><div class="fx-student-list">${visible.map(item => `<label class="fx-student-row"><input type="checkbox" data-student="${item.id}" ${selected.has(item.id) ? 'checked' : ''}><span>${item.name}</span><small>${item.group}</small></label>`).join('') || '<div class="fx-student-empty">未找到学生</div>'}</div></section><aside><h4>已选：<b>${selected.size}</b> 位学生</h4>${selectedStudents().map(item => `<span class="fx-student-tag">${item.name}<button data-remove="${item.id}">×</button></span>`).join('') || '<p>请从左侧选择学生</p>'}</aside></div><footer><button data-cancel>取消</button><button class="primary" data-confirm>确定</button></footer></div>`;
+        picker.querySelector('[data-close]').onclick = () => picker.remove(); picker.querySelector('[data-cancel]').onclick = () => picker.remove();
+        picker.querySelector('[data-search]').oninput = event => { keyword = event.target.value; renderPicker(); };
+        picker.querySelector('[data-all]').onchange = event => { visible.forEach(item => event.target.checked ? selected.add(item.id) : selected.delete(item.id)); renderPicker(); };
+        picker.querySelectorAll('[data-student]').forEach(box => box.onchange = () => { box.checked ? selected.add(box.dataset.student) : selected.delete(box.dataset.student); renderPicker(); });
+        picker.querySelectorAll('[data-remove]').forEach(button => button.onclick = () => { selected.delete(button.dataset.remove); renderPicker(); });
+        picker.querySelector('[data-confirm]').onclick = () => { picker.remove(); renderPublish(); };
+      };
+      renderPicker(); dialog.append(picker);
+    };
+    renderPublish(); shell.append(dialog);
   }
   function openRowMenu(shell, state, render, query, hasBlockedReview, event, type, id) {
     document.querySelector('.fx-row-menu')?.remove();
