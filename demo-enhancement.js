@@ -60,10 +60,7 @@
       shell.querySelector('.fx-files-search').oninput = e => render(e.target.value);
       shell.querySelector('[data-manage]').onclick = () => { state.manage = !state.manage; state.selected.clear(); render(query); };
       shell.querySelector('[data-new]').onclick = () => createFolder(shell, state, render, query);
-      shell.querySelector('[data-upload]').onclick = () => {
-        if (!state.currentId) { showToast(shell, '请先进入一个文件夹后再上传文件'); return; }
-        uploadFile(shell, state, render, query);
-      };
+      shell.querySelector('[data-upload]').onclick = () => uploadFile(shell, state, render, query);
       shell.querySelector('[data-root]')?.addEventListener('click', () => { state.currentId = null; state.manage=false; render(''); });
       shell.querySelector('[data-home]')?.addEventListener('click', () => shell.remove());
       shell.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click', () => { state.currentId = button.dataset.jump; state.manage=false; render(''); }));
