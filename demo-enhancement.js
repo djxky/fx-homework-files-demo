@@ -184,11 +184,18 @@
     renderPublish(); shell.append(dialog);
   }
   function openPublishRecords(shell, state, render, query) {
-    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${(record.classes || ['初二（3）班']).join('、')}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action" data-republish="${record.id}">再次发布</button></td></tr>`).join('');
+    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${(record.classes || ['初二（3）班']).join('、')}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action danger" data-delete="${record.id}">删除</button></td></tr>`).join('');
     shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收班级和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收班级</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
     shell.querySelector('[data-back]').onclick = () => render(query);
     shell.querySelectorAll('[data-students]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.students); if (record) showPublishStudents(shell, record); });
-    shell.querySelectorAll('[data-republish]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.republish); if (record) distribute(shell, state, record.file); });
+    shell.querySelectorAll('[data-delete]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.delete); if (record) confirmDeletePublishRecord(shell, state, render, query, record); });
+  }
+  function confirmDeletePublishRecord(shell, state, render, query, record) {
+    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
+    dialog.innerHTML = `<div class="fx-dialog fx-delete-publish"><h3>确认删除本次发布？</h3><p>删除后，学生设备上将不再显示「${record.file}」。</p><div class="fx-foot"><button data-cancel>取消</button><button class="primary" data-confirm>删除</button></div></div>`;
+    dialog.querySelector('[data-cancel]').onclick = () => dialog.remove();
+    dialog.querySelector('[data-confirm]').onclick = () => { state.publishRecords = state.publishRecords.filter(item => item.id !== record.id); dialog.remove(); openPublishRecords(shell, state, render, query); showToast(shell, '已删除本次发布，学生设备将同步移除文件'); };
+    shell.append(dialog);
   }
   function showPublishStudents(shell, record) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
