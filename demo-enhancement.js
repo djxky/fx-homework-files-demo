@@ -76,22 +76,53 @@
   }
   function uploadFile(shell, state, render, query) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
-    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><h3>上传文件</h3><p>文件将上传至当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-folder">▱</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">支持文档、图片、音频、视频等常见资料，可一次上传多个文件，也可以选择整个文件夹。</div><div class="fx-upload-selected" data-selected></div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>▣ 选择文件夹</button></div></div><input class="fx-upload-input" data-file-input type="file" multiple><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
-    const addFiles = list => {
-      const picked = Array.from(list || []); if (!picked.length) return;
-      picked.forEach(file => {
-        const isMedia = /^(audio|video)\//.test(file.type) || /\.(mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
-        const isRejected = /审核失败|不通过|违规/i.test(file.name);
-        state.files.push({ id:`file-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, parentId:state.currentId, name:file.name, size:file.size >= 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`, auditStatus:isRejected ? 'failed' : isMedia ? 'reviewing' : 'approved' });
-      });
-      dialog.remove(); render(query); showToast(shell, `已上传 ${picked.length} 个文件`);
+    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
+    const content = dialog.querySelector('[data-content]');
+    let picked = [], uploading = false, timer;
+    const formatSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
+    const isSupported = file => /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png)$/i.test(file.name);
+    const groups = () => {
+      const map = new Map();
+      picked.forEach(file => { const path = file.webkitRelativePath || ''; const group = path.includes('/') ? path.split('/')[0] : ''; if (!map.has(group)) map.set(group, []); map.get(group).push(file); });
+      return [...map.entries()];
+    };
+    const renderSelect = () => {
+      if (!picked.length) {
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-illustration" aria-hidden="true">▰</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">仅支持 PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX、JPG、PNG 格式文件，<br>单个文件不超过 100MB；一次可选择多个文件，也可以选择整个文件夹</div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div>`;
+      } else {
+        const supported = picked.filter(isSupported), unsupported = picked.length - supported.length;
+        const total = picked.reduce((sum, item) => sum + item.size, 0);
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-list"><div class="fx-upload-summary"><span>文件 <b>${picked.length}</b></span><i></i><span>文件夹 <b>${groups().filter(([name]) => name).length}</b></span><i></i><span>大小 <b>${formatSize(total)}</b></span>${unsupported ? `<i></i><span class="warning">${unsupported} 个不支持的文件</span>` : ''}<div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div><div class="fx-upload-tree">${groups().map(([name, items]) => name ? `<div class="fx-tree-folder">⌄ <span>▰</span><b>${name}</b><em>${items.length} 个</em></div>${items.map(file => `<div class="fx-tree-file"><span>${isSupported(file) ? '▤' : '!'}</span>${file.name}<em>${formatSize(file.size)}</em></div>`).join('')}` : items.map(file => `<div class="fx-tree-file"><span>${isSupported(file) ? '▤' : '!'}</span>${file.name}<em>${formatSize(file.size)}</em></div>`).join('')).join('')}</div></div><button class="fx-upload-start" data-start ${supported.length ? '' : 'disabled'}>开始上传</button>`;
+      }
+      bindSelection();
+    };
+    const bindSelection = () => {
+      content.querySelector('[data-pick-file]')?.addEventListener('click', () => inputFile.click());
+      content.querySelector('[data-pick-folder]')?.addEventListener('click', () => inputFolder.click());
+      content.querySelector('[data-start]')?.addEventListener('click', startUpload);
+      const drop = content.querySelector('[data-drop]');
+      if (drop) { drop.ondragover = event => { event.preventDefault(); drop.classList.add('is-dragging'); }; drop.ondragleave = () => drop.classList.remove('is-dragging'); drop.ondrop = event => { event.preventDefault(); drop.classList.remove('is-dragging'); addFiles(event.dataTransfer.files); }; }
+    };
+    const addFiles = list => { const files = Array.from(list || []); if (!files.length) return; picked = [...picked, ...files]; renderSelect(); };
+    const finishUpload = () => {
+      const uploaded = picked.filter(isSupported);
+      uploaded.forEach(file => state.files.push({ id:`file-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, parentId:state.currentId, name:file.name, size:formatSize(file.size), time:'刚刚', auditStatus:'approved' }));
+      uploading = false;
+      content.innerHTML = `<div class="fx-upload-success"><div class="fx-success-icon">✓</div><h2>导入完成，文件已入库</h2><p>资料已保存到当前文件夹，可继续整理和使用。</p><button class="fx-upload-done" data-done>完成</button></div>`;
+      content.querySelector('[data-done]').onclick = () => { dialog.remove(); render(query); showToast(shell, `已上传 ${uploaded.length} 个文件`); };
+    };
+    const startUpload = () => {
+      const uploaded = picked.filter(isSupported); if (!uploaded.length) return;
+      uploading = true; let percent = 8;
+      const stages = ['读取文件并保留原结构', 'AI 自动打标签', '抽取知识点与生成摘要', '建立关联与图谱'];
+      const drawProgress = () => { const active = percent < 42 ? 0 : percent < 68 ? 1 : percent < 88 ? 2 : 3; content.innerHTML = `<h3>上传文件</h3><p>正在导入 ${uploaded.length} 个文件，请勿关闭页面。</p><div class="fx-upload-progress"><strong>${percent}%</strong><div class="fx-progress-line"><span style="width:${percent}%"></span></div><div class="fx-progress-steps">${stages.map((stage, index) => `<div class="${index === active ? 'active' : index < active ? 'done' : ''}"><b>0${index + 1}</b><section><h4>${stage}</h4><p>${index === 0 ? `已读取 ${Math.max(1, Math.round(uploaded.length * percent / 100))}/${uploaded.length} 个文件…` : index === 1 ? '基于文件名、内容关键词识别分类' : index === 2 ? 'PDF/PPT 抽目录，图片做 OCR' : '同主题文件互相关联，准备好关联推荐'}</p></section><em>${index < active ? '已完成' : index === active ? '进行中' : '等待中'}</em></div>`).join('')}</div></div>`; };
+      drawProgress(); timer = setInterval(() => { percent = Math.min(100, percent + 12); if (percent >= 100) { clearInterval(timer); finishUpload(); } else drawProgress(); }, 520);
     };
     const inputFile = dialog.querySelector('[data-file-input]'), inputFolder = dialog.querySelector('[data-folder-input]');
-    dialog.querySelector('[data-close]').onclick = () => dialog.remove();
-    dialog.querySelector('[data-pick-file]').onclick = () => inputFile.click(); dialog.querySelector('[data-pick-folder]').onclick = () => inputFolder.click();
+    const closeDialog = () => { if (!uploading) { dialog.remove(); return; } const confirm = document.createElement('div'); confirm.className='fx-upload-exit'; confirm.innerHTML=`<div><button class="fx-upload-exit-x" data-cancel>×</button><h3>确认退出吗？</h3><p>退出将中断上传操作，已上传文件会保留，剩余文件将停止上传。</p><footer><button data-cancel>取消</button><button class="primary" data-confirm>确定</button></footer></div>`; confirm.querySelectorAll('[data-cancel]').forEach(button => button.onclick=()=>confirm.remove()); confirm.querySelector('[data-confirm]').onclick=()=>{ clearInterval(timer); dialog.remove(); render(query); showToast(shell, '已停止上传'); }; dialog.append(confirm); };
+    dialog.querySelector('[data-close]').onclick = closeDialog;
     inputFile.onchange = () => addFiles(inputFile.files); inputFolder.onchange = () => addFiles(inputFolder.files);
-    const drop = dialog.querySelector('[data-drop]'); drop.ondragover = event => event.preventDefault(); drop.ondrop = event => { event.preventDefault(); addFiles(event.dataTransfer.files); };
-    shell.append(dialog);
+    renderSelect(); shell.append(dialog);
   }
   function distribute(shell, name) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask'; dialog.innerHTML = `<div class="fx-dialog"><h3>布置到墨水屏</h3><p>选择接收资料的班级，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-class"><input type="checkbox" checked> 初二（3）班　42 人 · 已绑定墨水屏 39 台</label><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm>确认布置</button></div></div>`;
