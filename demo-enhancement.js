@@ -76,11 +76,13 @@
   }
   function uploadFile(shell, state, render, query) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
-    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
+    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.wav,.m4a,.aac,.mp4,.mov,.avi,.mkv"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
     const content = dialog.querySelector('[data-content]');
     let picked = [], uploading = false, timer;
     const formatSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
-    const isSupported = file => /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png)$/i.test(file.name);
+    const isMedia = file => /^(audio|video)\//.test(file.type || '') || /\.(mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
+    const isSupported = file => /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
+    const isOversize = file => file.size > (isMedia(file) ? 300 : 100) * 1024 * 1024;
     const groups = () => {
       const map = new Map();
       picked.forEach(file => { const path = file.webkitRelativePath || ''; const group = path.includes('/') ? path.split('/')[0] : ''; if (!map.has(group)) map.set(group, []); map.get(group).push(file); });
@@ -88,11 +90,11 @@
     };
     const renderSelect = () => {
       if (!picked.length) {
-        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-illustration" aria-hidden="true">▰</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">仅支持 PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX、JPG、PNG 格式文件，<br>单个文件不超过 100MB；一次可选择多个文件，也可以选择整个文件夹</div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div>`;
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-illustration" aria-hidden="true">▰</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">支持文档、图片、音频、视频格式文件，<br>文档、图片单个文件不超过 100MB；音频、视频单个文件不超过 300MB</div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div>`;
       } else {
-        const supported = picked.filter(isSupported), unsupported = picked.length - supported.length;
+        const supported = picked.filter(file => isSupported(file) && !isOversize(file)), unsupported = picked.length - supported.length;
         const total = picked.reduce((sum, item) => sum + item.size, 0);
-        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-list"><div class="fx-upload-summary"><span>文件 <b>${picked.length}</b></span><i></i><span>文件夹 <b>${groups().filter(([name]) => name).length}</b></span><i></i><span>大小 <b>${formatSize(total)}</b></span>${unsupported ? `<i></i><span class="warning">${unsupported} 个不支持的文件</span>` : ''}<div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div><div class="fx-upload-tree">${groups().map(([name, items]) => name ? `<div class="fx-tree-folder">⌄ <span>▰</span><b>${name}</b><em>${items.length} 个</em></div>${items.map(file => `<div class="fx-tree-file"><span>${isSupported(file) ? '▤' : '!'}</span>${file.name}<em>${formatSize(file.size)}</em></div>`).join('')}` : items.map(file => `<div class="fx-tree-file"><span>${isSupported(file) ? '▤' : '!'}</span>${file.name}<em>${formatSize(file.size)}</em></div>`).join('')).join('')}</div></div><button class="fx-upload-start" data-start ${supported.length ? '' : 'disabled'}>开始上传</button>`;
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-list"><div class="fx-upload-summary"><span>文件 <b>${picked.length}</b></span><i></i><span>文件夹 <b>${groups().filter(([name]) => name).length}</b></span><i></i><span>大小 <b>${formatSize(total)}</b></span>${unsupported ? `<i></i><span class="warning">${unsupported} 个不支持或超出大小限制的文件</span>` : ''}<div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div><div class="fx-upload-tree">${groups().map(([name, items]) => name ? `<div class="fx-tree-folder">⌄ <span>▰</span><b>${name}</b><em>${items.length} 个</em></div>${items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')}` : items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')).join('')}</div></div><button class="fx-upload-start" data-start ${supported.length ? '' : 'disabled'}>开始上传</button>`;
       }
       bindSelection();
     };
@@ -116,14 +118,14 @@
     };
     const addFiles = list => { const files = Array.from(list || []); if (!files.length) return; picked = [...picked, ...files]; renderSelect(); };
     const finishUpload = () => {
-      const uploaded = picked.filter(isSupported);
+      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file));
       uploaded.forEach(file => state.files.push({ id:`file-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, parentId:state.currentId, name:file.name, size:formatSize(file.size), time:'刚刚', auditStatus:'approved' }));
       uploading = false;
       content.innerHTML = `<div class="fx-upload-success"><div class="fx-success-icon">✓</div><h2>导入完成，文件已入库</h2><p>资料已保存到当前文件夹，可继续整理和使用。</p><button class="fx-upload-done" data-done>完成</button></div>`;
       content.querySelector('[data-done]').onclick = () => { dialog.remove(); render(query); showToast(shell, `已上传 ${uploaded.length} 个文件`); };
     };
     const startUpload = () => {
-      const uploaded = picked.filter(isSupported); if (!uploaded.length) return;
+      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file)); if (!uploaded.length) return;
       uploading = true; let percent = 8;
       const drawProgress = () => {
         const completed = Math.min(uploaded.length, Math.floor(uploaded.length * percent / 100));
