@@ -30,6 +30,10 @@
         { id:'file-6', parentId:'exam', name:'中考英语听力复习音频.mp3', size:'18.6MB', time:'刚刚', auditStatus:'reviewing' },
         { id:'file-7', parentId:'exam', name:'中考备考讲座录播.mp4', size:'426.8MB', time:'刚刚', auditStatus:'reviewing' },
         { id:'file-8', parentId:'exam', name:'中考冲刺课程录音.mp3', size:'22.1MB', time:'刚刚', auditStatus:'failed' }
+      ], publishRecords: [
+        { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', students:['张小雨','李明哲','王思涵'], time:'今天 09:32', status:'已发布' },
+        { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
+        { id:'publish-3', file:'人教版数学七年级下册教师用书.pdf', subject:'数学', students:['张小雨','刘嘉乐','王思涵','陈子轩'], time:'7月13日 10:06', status:'已发布' }
       ]
     };
     const shell = document.createElement('section'); shell.id = 'fx-files';
@@ -55,12 +59,13 @@
       const fileRows = currentFiles.map(item => `<tr>${state.manage ? `<td class="select"><input class="fx-check" type="checkbox" data-select="file:${item.id}" ${state.selected.has(`file:${item.id}`) ? 'checked' : ''}></td>` : ''}<td class="name">${fileIcon(item)}${item.name}${item.auditStatus === 'reviewing' ? '<span class="fx-audit-tag reviewing">审核中</span>' : item.auditStatus === 'failed' ? '<span class="fx-audit-tag failed">审核失败</span>' : ''}</td><td class="uploader">—</td><td class="time">${item.time || '刚刚'}</td><td class="size">${item.size}</td><td class="op"><button class="fx-row-more" data-more-type="file" data-more-id="${item.id}" aria-label="更多操作">…</button></td></tr>`).join('');
       const columns = state.manage ? '<th class="select"></th>' : '';
       const empty = !folderRows && !fileRows ? `<tr><td colspan="${state.manage ? 6 : 5}" class="fx-empty">当前文件夹暂无文件</td></tr>` : '';
-      shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close">← 返回</button>${breadcrumb}<div class="fx-files-actions"><input class="fx-files-search" placeholder="搜索" value="${query}"><button class="fx-file-btn" data-manage>${state.manage ? '完成' : '☷ 管理'}</button><button class="fx-file-btn" data-new>▣ 新建文件夹</button><button class="fx-file-btn primary" data-upload>↥ 上传文件</button></div></header>${state.manage ? `<div class="fx-manage-bar">已选择 ${state.selected.size} 项</div>` : ''}<table class="fx-files-table"><thead><tr>${columns}<th class="name">文件名</th><th class="uploader">上传者</th><th class="time">更新时间</th><th class="size">大小</th><th class="op">操作</th></tr></thead><tbody>${folderRows}${fileRows}${empty}</tbody></table>`;
+      shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close">← 返回</button>${breadcrumb}<div class="fx-files-actions"><input class="fx-files-search" placeholder="搜索" value="${query}"><button class="fx-file-btn" data-records>发布记录</button><button class="fx-file-btn" data-manage>${state.manage ? '完成' : '☷ 管理'}</button><button class="fx-file-btn" data-new>▣ 新建文件夹</button><button class="fx-file-btn primary" data-upload>↥ 上传文件</button></div></header>${state.manage ? `<div class="fx-manage-bar">已选择 ${state.selected.size} 项</div>` : ''}<table class="fx-files-table"><thead><tr>${columns}<th class="name">文件名</th><th class="uploader">上传者</th><th class="time">更新时间</th><th class="size">大小</th><th class="op">操作</th></tr></thead><tbody>${folderRows}${fileRows}${empty}</tbody></table>`;
       shell.querySelector('.fx-files-close').onclick = () => { if (state.currentId) { state.currentId = folder(state.currentId)?.parentId ?? null; state.manage = false; render(''); } else { shell.remove(); } };
       shell.querySelector('.fx-files-search').oninput = e => render(e.target.value);
       shell.querySelector('[data-manage]').onclick = () => { state.manage = !state.manage; state.selected.clear(); render(query); };
       shell.querySelector('[data-new]').onclick = () => createFolder(shell, state, render, query);
       shell.querySelector('[data-upload]').onclick = () => uploadFile(shell, state, render, query);
+      shell.querySelector('[data-records]').onclick = () => openPublishRecords(shell, state, render, query);
       shell.querySelector('[data-root]')?.addEventListener('click', () => { state.currentId = null; state.manage=false; render(''); });
       shell.querySelector('[data-home]')?.addEventListener('click', () => shell.remove());
       shell.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click', () => { state.currentId = button.dataset.jump; state.manage=false; render(''); }));
@@ -140,7 +145,7 @@
     inputFile.onchange = () => addFiles(inputFile.files); inputFolder.onchange = () => addFiles(inputFolder.files);
     renderSelect(); shell.append(dialog);
   }
-  function distribute(shell, name) {
+  function distribute(shell, state, name) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
     const students = [
       { id:'s1', name:'张小雨', group:'初二（3）班' }, { id:'s2', name:'李明哲', group:'初二（3）班' },
@@ -157,6 +162,7 @@
       dialog.querySelector('[data-students]').onclick = openStudentPicker;
       dialog.querySelector('[data-confirm]').onclick = () => {
         if (!subject || !names.length) return;
+        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, students:names.map(item => item.name), time:'刚刚', status:'已发布' });
         dialog.remove(); showToast(shell, `已发布给 ${names.length} 名学生（${subject}）`);
       };
     };
@@ -176,6 +182,18 @@
     };
     renderPublish(); shell.append(dialog);
   }
+  function openPublishRecords(shell, state, render, query) {
+    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${record.students.slice(0, 2).join('、')}${record.students.length > 2 ? ` 等 ${record.students.length} 人` : ''}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action" data-republish="${record.id}">再次发布</button></td></tr>`).join('');
+    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收学生和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收学生</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
+    shell.querySelector('[data-back]').onclick = () => render(query);
+    shell.querySelectorAll('[data-students]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.students); if (record) showPublishStudents(shell, record); });
+    shell.querySelectorAll('[data-republish]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.republish); if (record) distribute(shell, state, record.file); });
+  }
+  function showPublishStudents(shell, record) {
+    const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
+    dialog.innerHTML = `<div class="fx-dialog fx-record-students"><h3>接收学生</h3><p>${record.file} · ${record.subject} · ${record.time}</p><div>${record.students.map(name => `<span>${name}</span>`).join('')}</div><div class="fx-foot"><button class="primary" data-close>知道了</button></div></div>`;
+    dialog.querySelector('[data-close]').onclick = () => dialog.remove(); shell.append(dialog);
+  }
   function openRowMenu(shell, state, render, query, hasBlockedReview, event, type, id) {
     document.querySelector('.fx-row-menu')?.remove();
     const rect = event.currentTarget.getBoundingClientRect(); const menu = document.createElement('div');
@@ -185,7 +203,7 @@
     const canDistribute = type === 'file' && !reviewBlocked;
     menu.className = 'fx-row-menu'; menu.style.top = `${rect.bottom + 4}px`; menu.style.left = `${rect.right - 172}px`;
     menu.innerHTML = `${canDistribute ? '<button data-distribute>发布到墨水屏</button><div class="fx-row-menu-divider"></div>' : reviewBlocked && type === 'file' ? '<div class="fx-row-menu-hint">审核未通过，暂不可发布</div><div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
-    menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, item.name); });
+    menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, state, item.name); });
     menu.querySelector('[data-move]').onclick = () => { menu.remove(); moveItem(shell, state, render, query, type, id); };
     menu.querySelector('[data-rename]').onclick = () => {
       menu.remove(); const name = prompt(`重命名${type === 'folder' ? '文件夹' : '文件'}`, item.name);
