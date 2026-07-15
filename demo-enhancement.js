@@ -96,9 +96,20 @@
       }
       bindSelection();
     };
+    const demoFiles = folder => folder ? [
+      { name:'编辑题目/二年级数学练习.docx', size:27341, webkitRelativePath:'编辑题目/二年级数学练习.docx' },
+      { name:'编辑题目/二年级数学课件.pptx', size:13312, webkitRelativePath:'编辑题目/二年级数学课件.pptx' },
+      { name:'编辑题目/二年级单元检测.pdf', size:13312, webkitRelativePath:'编辑题目/二年级单元检测.pdf' },
+      { name:'编辑题目/二年级课堂练习.jpg', size:13312, webkitRelativePath:'编辑题目/二年级课堂练习.jpg' }
+    ] : [
+      { name:'二年级数学单元练习.docx', size:27341 },
+      { name:'二年级数学课堂课件.pptx', size:13312 },
+      { name:'二年级单元检测卷.pdf', size:13312 }
+    ];
     const bindSelection = () => {
-      content.querySelector('[data-pick-file]')?.addEventListener('click', () => inputFile.click());
-      content.querySelector('[data-pick-folder]')?.addEventListener('click', () => inputFolder.click());
+      // 此页面是交互演示：按钮直接进入参考稿中的待上传清单；仍保留拖入和原生文件输入以支持真实文件选择。
+      content.querySelector('[data-pick-file]')?.addEventListener('click', () => addFiles(demoFiles(false)));
+      content.querySelector('[data-pick-folder]')?.addEventListener('click', () => addFiles(demoFiles(true)));
       content.querySelector('[data-start]')?.addEventListener('click', startUpload);
       const drop = content.querySelector('[data-drop]');
       if (drop) { drop.ondragover = event => { event.preventDefault(); drop.classList.add('is-dragging'); }; drop.ondragleave = () => drop.classList.remove('is-dragging'); drop.ondrop = event => { event.preventDefault(); drop.classList.remove('is-dragging'); addFiles(event.dataTransfer.files); }; }
