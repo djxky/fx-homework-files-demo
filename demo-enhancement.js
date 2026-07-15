@@ -31,9 +31,9 @@
         { id:'file-7', parentId:'exam', name:'中考备考讲座录播.mp4', size:'426.8MB', time:'刚刚', auditStatus:'reviewing' },
         { id:'file-8', parentId:'exam', name:'中考冲刺课程录音.mp3', size:'22.1MB', time:'刚刚', auditStatus:'failed' }
       ], publishRecords: [
-        { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', students:['张小雨','李明哲','王思涵'], time:'今天 09:32', status:'已发布' },
-        { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
-        { id:'publish-3', file:'人教版数学七年级下册教师用书.pdf', subject:'数学', students:['张小雨','刘嘉乐','王思涵','陈子轩'], time:'7月13日 10:06', status:'已发布' }
+        { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', classes:['初二（3）班'], students:['张小雨','李明哲','王思涵'], time:'今天 09:32', status:'已发布' },
+        { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', classes:['初二（3）班'], students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
+        { id:'publish-3', file:'人教版数学七年级下册教师用书.pdf', subject:'数学', classes:['初二（3）班'], students:['张小雨','刘嘉乐','王思涵','陈子轩'], time:'7月13日 10:06', status:'已发布' }
       ]
     };
     const shell = document.createElement('section'); shell.id = 'fx-files';
@@ -163,7 +163,7 @@
       dialog.querySelector('[data-students]').onclick = openStudentPicker;
       dialog.querySelector('[data-confirm]').onclick = () => {
         if (!subject || !names.length) return;
-        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, students:names.map(item => item.name), time:'刚刚', status:'已发布' });
+        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, classes:[...new Set(names.map(item => item.group))], students:names.map(item => item.name), time:'刚刚', status:'已发布' });
         dialog.remove(); showToast(shell, `已发布给 ${names.length} 名学生（${subject}）`);
       };
     };
@@ -184,8 +184,8 @@
     renderPublish(); shell.append(dialog);
   }
   function openPublishRecords(shell, state, render, query) {
-    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${record.students.slice(0, 2).join('、')}${record.students.length > 2 ? ` 等 ${record.students.length} 人` : ''}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action" data-republish="${record.id}">再次发布</button></td></tr>`).join('');
-    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收学生和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收学生</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
+    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${(record.classes || ['初二（3）班']).join('、')}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action" data-republish="${record.id}">再次发布</button></td></tr>`).join('');
+    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收班级和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收班级</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
     shell.querySelector('[data-back]').onclick = () => render(query);
     shell.querySelectorAll('[data-students]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.students); if (record) showPublishStudents(shell, record); });
     shell.querySelectorAll('[data-republish]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.republish); if (record) distribute(shell, state, record.file); });
