@@ -150,8 +150,9 @@
     const item = type === 'folder' ? state.folders.find(folder => folder.id === id) : state.files.find(file => file.id === id);
     if (!item) return;
     const reviewBlocked = type === 'folder' ? hasBlockedReview(id) : ['reviewing', 'failed'].includes(item.auditStatus);
+    const canDistribute = type === 'file' && !reviewBlocked;
     menu.className = 'fx-row-menu'; menu.style.top = `${rect.bottom + 4}px`; menu.style.left = `${rect.right - 172}px`;
-    menu.innerHTML = `${reviewBlocked ? '<div class="fx-row-menu-hint">审核未通过，暂不可布置</div>' : '<button data-distribute>布置到墨水屏</button>'}<div class="fx-row-menu-divider"></div><button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
+    menu.innerHTML = `${canDistribute ? '<button data-distribute>布置到墨水屏</button><div class="fx-row-menu-divider"></div>' : reviewBlocked && type === 'file' ? '<div class="fx-row-menu-hint">审核未通过，暂不可布置</div><div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
     menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, item.name); });
     menu.querySelector('[data-move]').onclick = () => { menu.remove(); moveItem(shell, state, render, query, type, id); };
     menu.querySelector('[data-rename]').onclick = () => {
