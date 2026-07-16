@@ -1,6 +1,6 @@
 window.FX_HOMEWORK_REVIEW = {
   title: '作业 · 我的文件',
-  source: { label: '石墨产品稿链接待补充', url: '' },
+  source: { label: '查看石墨产品稿与评论', url: 'https://shimo.zhenguanyu.com/docs/30dyDb9LGwZXfJ1K' },
   reviewVersions: [
     {
       id: 'v1.0', label: 'v1.0 文件管理与发布', default: true,
