@@ -192,7 +192,7 @@
   }
   function confirmDeletePublishRecord(shell, state, render, query, record) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
-    dialog.innerHTML = `<div class="fx-dialog fx-delete-publish"><h3>确认删除本次发布？</h3><p>删除后，学生设备上将不再显示「${record.file}」。</p><div class="fx-foot"><button data-cancel>取消</button><button class="primary" data-confirm>删除</button></div></div>`;
+    dialog.innerHTML = `<div class="fx-dialog fx-delete-publish"><h3>确认删除本次发布？</h3><p>删除后，学生设备上将不再显示「${record.file}」。</p><div class="fx-foot"><button data-cancel>取消</button><button class="primary" data-confirm>确认</button></div></div>`;
     dialog.querySelector('[data-cancel]').onclick = () => dialog.remove();
     dialog.querySelector('[data-confirm]').onclick = () => { state.publishRecords = state.publishRecords.filter(item => item.id !== record.id); dialog.remove(); openPublishRecords(shell, state, render, query); showToast(shell, '已删除本次发布，学生设备将同步移除文件'); };
     shell.append(dialog);
