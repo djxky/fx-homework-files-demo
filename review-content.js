@@ -10,7 +10,7 @@ window.FX_HOMEWORK_REVIEW = {
         { anchorId: 'publish-dialog', title: '发布到墨水屏', purpose: '确认学科和接收学生为必填项，且文件可多次发布。', sourceUrl: '' },
         { anchorId: 'student-picker', title: '选择学生', purpose: '确认按班级或指定学生选择接收对象的交互。', sourceUrl: '' },
         { anchorId: 'publish-records', title: '发布记录与删除同步', purpose: '确认整班显示班级、指定发送显示学生，删除后学生设备同步移除文件。', sourceUrl: '' },
-        { anchorId: 'file-preview', title: '文件预览与下载', purpose: '确认预览页仅提供原文件预览、发布到墨水屏、发布记录和下载。', sourceUrl: '' }
+        { anchorId: 'file-preview', title: '文件预览与下载', purpose: '确认预览页仅提供原文件预览、发布到墨水屏和下载。', sourceUrl: '' }
       ]
     },
     {
