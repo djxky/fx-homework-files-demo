@@ -1,4 +1,8 @@
 (() => {
+  if (new URLSearchParams(location.search).get('review') === '1') {
+    const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = 'review-mode.css?v=2026071601'; document.head.append(style);
+    const content = document.createElement('script'); content.src = 'review-content.js?v=2026071601'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071601'; document.body.append(mode); }; document.body.append(content);
+  }
   const resource = [...document.querySelectorAll('div,button,a')].find(el => el.textContent.trim() === '我的资源' && !el.querySelector('div'));
   if (!resource) return;
   let menu;
