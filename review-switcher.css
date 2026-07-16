@@ -1,4 +1,22 @@
-#fx-review-switcher{position:fixed;z-index:19998;right:24px;top:88px;display:flex;padding:3px;border:1px solid #d8dfe8;border-radius:8px;background:rgba(255,255,255,.94);box-shadow:0 4px 14px rgba(30,48,70,.1);font:13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
-#fx-review-switcher button{height:28px;padding:0 11px;border:0;border-radius:5px;background:transparent;color:#677586;cursor:pointer}
-#fx-review-switcher button.active{background:#e8f2ff;color:#246fce;font-weight:650}
-@media(max-width:640px){#fx-review-switcher{right:12px;top:70px}}
+#fx-review-switcher{position:fixed;z-index:19998;right:24px;top:92px;display:flex;gap:2px;padding:4px;border:1px solid rgba(213,221,231,.9);border-radius:999px;background:rgba(255,255,255,.94);box-shadow:0 6px 20px rgba(35,54,77,.1);backdrop-filter:blur(10px);font:13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+#fx-review-switcher button{height:30px;padding:0 13px;border:0;border-radius:999px;background:transparent;color:#7b8796;cursor:pointer;transition:background .16s,color .16s}
+#fx-review-switcher button:hover{color:#3b6eaa;background:#f1f6fc}
+#fx-review-switcher button.active{background:#e7f1ff;color:#286fc4;font-weight:650}
+#fx-review-panel{top:142px;right:24px;width:356px;border:1px solid #dde5ef;border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 18px 48px rgba(27,48,73,.18)}
+#fx-review-panel .fx-review-head{padding:15px 16px 13px;border-bottom:1px solid #edf1f5;background:linear-gradient(135deg,#f8fbff,#fff);cursor:move}
+#fx-review-panel .fx-review-title span{margin:0 0 2px;color:#7f98b4;font-size:11px;font-weight:650;letter-spacing:.06em}
+#fx-review-panel .fx-review-title strong{font-size:16px;color:#26374a}
+#fx-review-panel .fx-review-title em{display:block;margin-top:3px;color:#8997a7;font-size:12px;font-style:normal}
+#fx-review-panel .fx-review-close{background:#f1f5f9;color:#667689}
+#fx-review-panel .fx-review-body{padding:11px 14px 14px}
+#fx-review-panel .fx-review-topline{display:flex;justify-content:space-between;align-items:center;padding:0 2px 9px;color:#8b98a7;font-size:12px}
+#fx-review-panel .fx-review-topline a{color:#397ccd;text-decoration:none}
+#fx-review-panel .is-disabled{color:#a5afba}
+#fx-review-panel .fx-review-item{padding:11px 4px;border-top:1px solid #eef2f5}
+#fx-review-panel .fx-review-item.is-active{background:#f2f7ff}
+#fx-review-panel .fx-review-item strong{color:#34465a}
+#fx-review-panel .fx-review-item p{color:#788695}
+#fx-review-panel .fx-review-item button{padding:0;border:0;background:transparent;color:#347bd0;font:12px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
+#fx-review-panel .fx-review-item button:disabled{color:#a4adb7;cursor:not-allowed}
+#fx-review-panel .fx-review-number,.fx-review-marker{background:#4d91df}
+@media(max-width:640px){#fx-review-switcher{right:12px;top:68px}#fx-review-panel{top:116px;right:12px;width:calc(100vw - 24px);max-height:58vh}}

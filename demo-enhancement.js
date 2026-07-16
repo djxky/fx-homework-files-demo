@@ -1,16 +1,14 @@
 (() => {
-  const reviewEnabled = new URLSearchParams(location.search).get('review') === '1';
-  const markReviewAnchor = (node, id) => { if (reviewEnabled && node) node.dataset.reviewAnchor = id; };
-  const switcherStyle = document.createElement('link'); switcherStyle.rel = 'stylesheet'; switcherStyle.href = 'review-switcher.css?v=2026071602'; document.head.append(switcherStyle);
-  const reviewStyle = document.createElement('link'); reviewStyle.rel = 'stylesheet'; reviewStyle.href = 'review-mode.css?v=2026071602'; document.head.append(reviewStyle);
-  const switcher = document.createElement('nav'); switcher.id = 'fx-review-switcher'; switcher.setAttribute('aria-label', '模式切换');
-  switcher.innerHTML = `<button class="${reviewEnabled ? '' : 'active'}" data-demo>演示</button><button class="${reviewEnabled ? 'active' : ''}" data-review>过稿</button>`;
-  switcher.querySelector('[data-demo]').onclick = () => { const next = new URL(location.href); next.searchParams.delete('review'); next.searchParams.delete('reviewVersion'); location.href = next; };
-  switcher.querySelector('[data-review]').onclick = () => { const next = new URL(location.href); next.searchParams.set('review', '1'); next.searchParams.set('reviewVersion', 'v1.0'); location.href = next; };
-  document.body.append(switcher);
-  if (reviewEnabled) {
-    const content = document.createElement('script'); content.src = 'review-content.js?v=2026071602'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071602'; document.body.append(mode); }; document.body.append(content);
-  }
+  let reviewEnabled = new URLSearchParams(location.search).get('review') === '1'; const reviewAnchors = new Map();
+  const markReviewAnchor = (node, id) => { if (!node) return; reviewAnchors.set(id, node); if (reviewEnabled) node.dataset.reviewAnchor = id; else node.removeAttribute('data-review-anchor'); };
+  window.FX_SYNC_REVIEW_ANCHORS = enabled => { reviewEnabled = enabled; reviewAnchors.forEach((node, id) => { if (!node.isConnected) return; if (enabled) node.dataset.reviewAnchor = id; else node.removeAttribute('data-review-anchor'); }); };
+  const appendStyle = href => { const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; document.head.append(link); };
+  appendStyle('review-switcher.css?v=2026071603'); appendStyle('review-mode.css?v=2026071603');
+  const switcher = document.createElement('nav'); switcher.id = 'fx-review-switcher'; switcher.setAttribute('aria-label', '模式切换'); document.body.append(switcher);
+  const renderSwitcher = () => { switcher.innerHTML = `<button class="${reviewEnabled ? '' : 'active'}" data-demo>演示</button><button class="${reviewEnabled ? 'active' : ''}" data-review>过稿</button>`; switcher.querySelector('[data-demo]').onclick = () => window.FX_SET_REVIEW_MODE(false); switcher.querySelector('[data-review]').onclick = () => window.FX_SET_REVIEW_MODE(true); };
+  const loadReviewLayer = () => { if (window.FX_START_REVIEW_MODE) return window.FX_START_REVIEW_MODE(); if (document.querySelector('[data-fx-review-content]')) return; const content = document.createElement('script'); content.dataset.fxReviewContent = '1'; content.src = 'review-content.js?v=2026071603'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071603'; document.body.append(mode); }; document.body.append(content); };
+  window.FX_SET_REVIEW_MODE = (enabled, push = true) => { const next = new URL(location.href); if (enabled) { next.searchParams.set('review', '1'); next.searchParams.set('reviewVersion', next.searchParams.get('reviewVersion') || 'v1.0'); } else { next.searchParams.delete('review'); next.searchParams.delete('reviewVersion'); } if (push) history.pushState({}, '', next); reviewEnabled = enabled; window.FX_SYNC_REVIEW_ANCHORS(enabled); renderSwitcher(); if (enabled) { loadReviewLayer(); window.FX_SET_REVIEW_VERSION?.(next.searchParams.get('reviewVersion')); } else window.FX_EXIT_REVIEW_MODE?.(); };
+  addEventListener('popstate', () => window.FX_SET_REVIEW_MODE(new URLSearchParams(location.search).get('review') === '1', false)); renderSwitcher(); if (reviewEnabled) loadReviewLayer();
   const resource = [...document.querySelectorAll('div,button,a')].find(el => el.textContent.trim() === '我的资源' && !el.querySelector('div'));
   if (!resource) return;
   let menu;
