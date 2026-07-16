@@ -12,14 +12,6 @@ window.FX_HOMEWORK_REVIEW = {
         { anchorId: 'publish-records', title: '发布记录与删除同步', purpose: '确认整班显示班级、指定发送显示学生，删除后学生设备同步移除文件。', sourceUrl: '' },
         { anchorId: 'file-preview', title: '文件预览与下载', purpose: '确认预览页仅提供原文件预览、发布到墨水屏和下载。', sourceUrl: '' }
       ]
-    },
-    {
-      id: 'v0.9', label: 'v0.9 基础文件浏览',
-      source: { label: '石墨历史稿链接待补充', url: '' },
-      items: [
-        { anchorId: 'file-list', title: '我的文件浏览', purpose: '确认文件夹层级、文件信息与基本管理入口。', sourceUrl: '' },
-        { anchorId: 'file-preview', title: '原文件预览', purpose: '确认文件可进入预览页并下载原文件。', sourceUrl: '' }
-      ]
     }
   ]
 };

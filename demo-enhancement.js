@@ -1,7 +1,15 @@
 (() => {
-  if (new URLSearchParams(location.search).get('review') === '1') {
-    const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = 'review-mode.css?v=2026071601'; document.head.append(style);
-    const content = document.createElement('script'); content.src = 'review-content.js?v=2026071601'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071601'; document.body.append(mode); }; document.body.append(content);
+  const reviewEnabled = new URLSearchParams(location.search).get('review') === '1';
+  const markReviewAnchor = (node, id) => { if (reviewEnabled && node) node.dataset.reviewAnchor = id; };
+  const switcherStyle = document.createElement('link'); switcherStyle.rel = 'stylesheet'; switcherStyle.href = 'review-switcher.css?v=2026071602'; document.head.append(switcherStyle);
+  const reviewStyle = document.createElement('link'); reviewStyle.rel = 'stylesheet'; reviewStyle.href = 'review-mode.css?v=2026071602'; document.head.append(reviewStyle);
+  const switcher = document.createElement('nav'); switcher.id = 'fx-review-switcher'; switcher.setAttribute('aria-label', '模式切换');
+  switcher.innerHTML = `<button class="${reviewEnabled ? '' : 'active'}" data-demo>演示</button><button class="${reviewEnabled ? 'active' : ''}" data-review>过稿</button>`;
+  switcher.querySelector('[data-demo]').onclick = () => { const next = new URL(location.href); next.searchParams.delete('review'); next.searchParams.delete('reviewVersion'); location.href = next; };
+  switcher.querySelector('[data-review]').onclick = () => { const next = new URL(location.href); next.searchParams.set('review', '1'); next.searchParams.set('reviewVersion', 'v1.0'); location.href = next; };
+  document.body.append(switcher);
+  if (reviewEnabled) {
+    const content = document.createElement('script'); content.src = 'review-content.js?v=2026071602'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071602'; document.body.append(mode); }; document.body.append(content);
   }
   const resource = [...document.querySelectorAll('div,button,a')].find(el => el.textContent.trim() === '我的资源' && !el.querySelector('div'));
   if (!resource) return;
@@ -64,6 +72,7 @@
       const columns = state.manage ? '<th class="select"></th>' : '';
       const empty = !folderRows && !fileRows ? `<tr><td colspan="${state.manage ? 6 : 5}" class="fx-empty">当前文件夹暂无文件</td></tr>` : '';
       shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close">← 返回</button>${breadcrumb}<div class="fx-files-actions"><input class="fx-files-search" placeholder="搜索" value="${query}"><button class="fx-file-btn" data-records>发布记录</button><button class="fx-file-btn" data-manage>${state.manage ? '完成' : '☷ 管理'}</button><button class="fx-file-btn" data-new>▣ 新建文件夹</button><button class="fx-file-btn primary" data-upload>↥ 上传文件</button></div></header>${state.manage ? `<div class="fx-manage-bar">已选择 ${state.selected.size} 项</div>` : ''}<table class="fx-files-table"><thead><tr>${columns}<th class="name">文件名</th><th class="uploader">上传者</th><th class="time">更新时间</th><th class="size">大小</th><th class="op">操作</th></tr></thead><tbody>${folderRows}${fileRows}${empty}</tbody></table>`;
+      markReviewAnchor(shell.querySelector('.fx-files-head'), 'file-list');
       shell.querySelector('.fx-files-close').onclick = () => { if (state.currentId) { state.currentId = folder(state.currentId)?.parentId ?? null; state.manage = false; render(''); } else { shell.remove(); } };
       shell.querySelector('.fx-files-search').oninput = e => render(e.target.value);
       shell.querySelector('[data-manage]').onclick = () => { state.manage = !state.manage; state.selected.clear(); render(query); };
@@ -87,6 +96,7 @@
   function uploadFile(shell, state, render, query) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
     dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.wav,.m4a,.aac,.mp4,.mov,.avi,.mkv"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
+    markReviewAnchor(dialog.querySelector('.fx-upload-modal'), 'upload-dialog');
     const content = dialog.querySelector('[data-content]');
     let picked = [], uploading = false, timer;
     const formatSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
@@ -162,6 +172,7 @@
     const renderPublish = () => {
       const names = selectedStudents();
       dialog.innerHTML = `<div class="fx-dialog fx-publish-modal"><h3>发布到墨水屏</h3><p>选择学科和接收学生，学生将通过墨水屏设备查看。</p><div class="fx-picked">${name}</div><label class="fx-publish-field"><span>学科 <b>*</b></span><select data-subject><option value="">请选择学科</option>${['语文','数学','英语','物理','化学','生物','其他'].map(item => `<option value="${item}" ${subject === item ? 'selected' : ''}>${item}</option>`).join('')}</select></label><div class="fx-publish-field"><span>选择学生 <b>*</b></span><button class="fx-student-trigger ${names.length ? 'has-value' : ''}" data-students>${names.length ? `已选择 ${names.length} 位学生` : '请选择学生'} <i>＋</i></button></div><div class="fx-foot"><button data-close>取消</button><button class="primary" data-confirm ${subject && names.length ? '' : 'disabled'}>确认发布</button></div></div>`;
+      markReviewAnchor(dialog.querySelector('.fx-publish-modal'), 'publish-dialog');
       dialog.querySelector('[data-close]').onclick = () => dialog.remove();
       dialog.querySelector('[data-subject]').onchange = event => { subject = event.target.value; renderPublish(); };
       dialog.querySelector('[data-students]').onclick = openStudentPicker;
@@ -177,6 +188,7 @@
       const renderPicker = () => {
         const visible = students.filter(item => item.name.includes(keyword));
         picker.innerHTML = `<div class="fx-student-panel"><header><h3>选择学生</h3><button data-close>×</button></header><div class="fx-student-body"><section><input class="fx-student-search" data-search placeholder="输入姓名搜索" value="${keyword}"><div class="fx-student-tabs"><button class="active">教学班</button><button>行政班</button></div><label class="fx-student-all"><input type="checkbox" data-all ${visible.length && visible.every(item => selected.has(item.id)) ? 'checked' : ''}> 初二（3）班 <em>${students.length} 人</em></label><div class="fx-student-list">${visible.map(item => `<label class="fx-student-row"><input type="checkbox" data-student="${item.id}" ${selected.has(item.id) ? 'checked' : ''}><span>${item.name}</span><small>${item.group}</small></label>`).join('') || '<div class="fx-student-empty">未找到学生</div>'}</div></section><aside><h4>已选：<b>${selected.size}</b> 位学生</h4>${selectedStudents().map(item => `<span class="fx-student-tag">${item.name}<button data-remove="${item.id}">×</button></span>`).join('') || '<p>请从左侧选择学生</p>'}</aside></div><footer><button data-cancel>取消</button><button class="primary" data-confirm>确定</button></footer></div>`;
+        markReviewAnchor(picker.querySelector('.fx-student-panel'), 'student-picker');
         picker.querySelector('[data-close]').onclick = () => picker.remove(); picker.querySelector('[data-cancel]').onclick = () => picker.remove();
         picker.querySelector('[data-search]').oninput = event => { keyword = event.target.value; renderPicker(); };
         picker.querySelector('[data-all]').onchange = event => { visible.forEach(item => event.target.checked ? selected.add(item.id) : selected.delete(item.id)); renderPicker(); };
@@ -192,6 +204,7 @@
     const recipientText = record => record.recipientType === 'student' ? record.students.join('、') : (record.classes || ['初二（3）班']).join('、');
     const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${recipientText(record)}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-recipients="${record.id}">查看${record.recipientType === 'student' ? '学生' : '班级'}</button><button class="fx-record-action danger" data-delete="${record.id}">删除</button></td></tr>`).join('');
     shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收对象和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收对象</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
+    markReviewAnchor(shell.querySelector('.fx-records-intro'), 'publish-records');
     shell.querySelector('[data-back]').onclick = () => render(query);
     shell.querySelectorAll('[data-recipients]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.recipients); if (record) showPublishRecipients(shell, record); });
     shell.querySelectorAll('[data-delete]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.delete); if (record) confirmDeletePublishRecord(shell, state, render, query, record); });
@@ -216,6 +229,7 @@
     const published = state.publishRecords.filter(item => item.file === file.name);
     const preview = isAudio ? `<div class="fx-media-preview"><div class="fx-media-symbol">♪</div><h2>${file.name}</h2><p>音频文件 · ${file.size}</p><div class="fx-media-wave">▁▃▆█▅▂▇▃</div><button>▶ 播放预览</button></div>` : isVideo ? `<div class="fx-media-preview"><div class="fx-media-symbol">▶</div><h2>${file.name}</h2><p>视频文件 · ${file.size}</p><div class="fx-video-stage">视频预览</div><button>▶ 播放预览</button></div>` : `<div class="fx-doc-preview"><div class="fx-doc-toolbar"><span>第 1 页 / 共 12 页</span><span>${type} 原文件预览</span></div><article><h1>${file.name.replace(/\.[^.]+$/, '')}</h1><p>资料预览</p><h2>一、学习目标</h2><p>本文件用于课堂学习与课后复习，请结合教学进度安排使用。</p><h2>二、核心内容</h2><p>通过例题、知识梳理和练习，帮助学生掌握本节重点内容。</p><ul><li>知识点梳理</li><li>典型例题讲解</li><li>分层练习</li></ul></article></div>`;
     shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">文件预览</strong></div><div class="fx-files-actions"><button class="fx-file-btn" data-records>发布记录${published.length ? ` · ${published.length}` : ''}</button><button class="fx-file-btn" data-publish>发布到墨水屏</button><button class="fx-file-btn primary" data-download>⇩ 下载</button></div></header><main class="fx-homework-preview"><section class="fx-preview-meta"><span class="fx-preview-type">${type}</span><h1>${file.name}</h1><p>上传人：张老师　·　${file.time || '刚刚'}　·　${file.size}</p></section>${preview}</main>`;
+    markReviewAnchor(shell.querySelector('.fx-homework-preview'), 'file-preview');
     shell.querySelector('[data-back]').onclick = () => render(query);
     shell.querySelector('[data-records]')?.remove();
     shell.querySelector('[data-publish]').onclick = () => distribute(shell, state, file.name);

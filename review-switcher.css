@@ -1,0 +1,4 @@
+#fx-review-switcher{position:fixed;z-index:19998;right:24px;top:88px;display:flex;padding:3px;border:1px solid #d8dfe8;border-radius:8px;background:rgba(255,255,255,.94);box-shadow:0 4px 14px rgba(30,48,70,.1);font:13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+#fx-review-switcher button{height:28px;padding:0 11px;border:0;border-radius:5px;background:transparent;color:#677586;cursor:pointer}
+#fx-review-switcher button.active{background:#e8f2ff;color:#246fce;font-weight:650}
+@media(max-width:640px){#fx-review-switcher{right:12px;top:70px}}

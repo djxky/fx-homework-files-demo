@@ -9,17 +9,7 @@
   let panel;
   const setUrl = () => { const next = new URL(location.href); next.searchParams.set('review', '1'); next.searchParams.set('reviewVersion', version.id); history.replaceState({}, '', next); };
   const close = () => { const next = new URL(location.href); next.searchParams.delete('review'); next.searchParams.delete('reviewVersion'); location.href = next; };
-  const ensureAnchors = () => {
-    const set = (id, node) => { if (node && !node.dataset.reviewAnchor) node.dataset.reviewAnchor = id; };
-    const filesHeader = [...document.querySelectorAll('#fx-files .fx-files-head')].find(node => !node.textContent.includes('发布记录') && !node.textContent.includes('文件预览'));
-    set('file-list', filesHeader);
-    set('upload-dialog', document.querySelector('.fx-upload-modal'));
-    set('publish-dialog', document.querySelector('.fx-publish-modal'));
-    set('student-picker', document.querySelector('.fx-student-panel'));
-    set('publish-records', document.querySelector('.fx-records-intro'));
-    set('file-preview', document.querySelector('.fx-homework-preview'));
-  };
-  const anchor = id => { ensureAnchors(); return document.querySelector(`[data-review-anchor="${id}"]`); };
+  const anchor = id => document.querySelector(`[data-review-anchor="${id}"]`);
   const focus = id => { const node = anchor(id); if (!node) return; activeId = id; renderPanel(); node.scrollIntoView({ behavior:'smooth', block:'center' }); document.querySelectorAll('.fx-review-highlight').forEach(item => item.classList.remove('fx-review-highlight')); node.classList.add('fx-review-highlight'); setTimeout(() => node.classList.remove('fx-review-highlight'), 1800); };
   const renderMarkers = () => {
     document.querySelectorAll('.fx-review-marker').forEach(item => item.remove());
@@ -33,10 +23,13 @@
     panel.querySelectorAll('[data-locate]').forEach(button => button.onclick = () => focus(button.dataset.locate));
     enableDrag(panel.querySelector('[data-drag]'));
   };
-  const enableDrag = handle => { let start; handle.onpointerdown = event => { if (event.target.closest('button,select')) return; start = { x:event.clientX, y:event.clientY, left:panel.offsetLeft, top:panel.offsetTop }; handle.setPointerCapture(event.pointerId); }; handle.onpointermove = event => { if (!start) return; const left = Math.min(Math.max(0, start.left + event.clientX - start.x), innerWidth - panel.offsetWidth); const top = Math.min(Math.max(0, start.top + event.clientY - start.y), innerHeight - panel.offsetHeight); panel.style.left = `${left}px`; panel.style.top = `${top}px`; panel.style.right = 'auto'; }; handle.onpointerup = () => { start = null; }; };
-  const refresh = () => { ensureAnchors(); renderPanel(); renderMarkers(); };
-  panel = document.createElement('aside'); panel.id = 'fx-review-panel'; document.body.append(panel); setUrl(); refresh();
-  addEventListener('scroll', renderMarkers, true); addEventListener('resize', renderMarkers);
+  const constrainPanel = () => { if (!panel) return; const left = Math.min(Math.max(0, panel.offsetLeft), Math.max(0, innerWidth - panel.offsetWidth)); const top = Math.min(Math.max(0, panel.offsetTop), Math.max(0, innerHeight - panel.offsetHeight)); panel.style.left = `${left}px`; panel.style.top = `${top}px`; panel.style.right = 'auto'; };
+  const enableDrag = handle => { let start; handle.onpointerdown = event => { if (event.target.closest('button,select')) return; start = { x:event.clientX, y:event.clientY, left:panel.offsetLeft, top:panel.offsetTop }; handle.setPointerCapture(event.pointerId); }; handle.onpointermove = event => { if (!start) return; panel.style.left = `${start.left + event.clientX - start.x}px`; panel.style.top = `${start.top + event.clientY - start.y}px`; panel.style.right = 'auto'; constrainPanel(); }; handle.onpointerup = () => { start = null; }; };
+  const refresh = () => { renderPanel(); renderMarkers(); };
+  panel = document.createElement('aside'); panel.id = 'fx-review-panel'; document.body.append(panel); setUrl(); refresh(); constrainPanel();
+  new ResizeObserver(constrainPanel).observe(panel);
+  addEventListener('scroll', renderMarkers, true); addEventListener('resize', () => { constrainPanel(); renderMarkers(); });
+  addEventListener('popstate', () => { version = versions.find(item => item.id === new URLSearchParams(location.search).get('reviewVersion')) || versions.find(item => item.default) || versions[0]; activeId = null; refresh(); });
   let refreshQueued = false;
   new MutationObserver(mutations => {
     const reviewOnly = node => node?.nodeType === 1 && (node === panel || panel.contains(node) || node.classList.contains('fx-review-marker'));
