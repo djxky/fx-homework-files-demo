@@ -31,9 +31,9 @@
         { id:'file-7', parentId:'exam', name:'中考备考讲座录播.mp4', size:'426.8MB', time:'刚刚', auditStatus:'reviewing' },
         { id:'file-8', parentId:'exam', name:'中考冲刺课程录音.mp3', size:'22.1MB', time:'刚刚', auditStatus:'failed' }
       ], publishRecords: [
-        { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', classes:['初二（3）班'], students:['张小雨','李明哲','王思涵'], time:'今天 09:32', status:'已发布' },
-        { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', classes:['初二（3）班'], students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
-        { id:'publish-3', file:'人教版数学七年级下册教师用书.pdf', subject:'数学', classes:['初二（3）班'], students:['张小雨','刘嘉乐','王思涵','陈子轩'], time:'7月13日 10:06', status:'已发布' }
+        { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', recipientType:'class', classes:['初二（3）班'], students:['张小雨','李明哲','王思涵','陈子轩','周语桐','刘嘉乐'], time:'今天 09:32', status:'已发布' },
+        { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', recipientType:'student', classes:[], students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
+        { id:'publish-3', file:'人教版数学七年级下册教师用书.pdf', subject:'数学', recipientType:'class', classes:['初二（3）班'], students:['张小雨','李明哲','王思涵','陈子轩','周语桐','刘嘉乐'], time:'7月13日 10:06', status:'已发布' }
       ]
     };
     const shell = document.createElement('section'); shell.id = 'fx-files';
@@ -163,7 +163,8 @@
       dialog.querySelector('[data-students]').onclick = openStudentPicker;
       dialog.querySelector('[data-confirm]').onclick = () => {
         if (!subject || !names.length) return;
-        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, classes:[...new Set(names.map(item => item.group))], students:names.map(item => item.name), time:'刚刚', status:'已发布' });
+        const recipientType = names.length === students.length ? 'class' : 'student';
+        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, recipientType, classes:recipientType === 'class' ? [...new Set(names.map(item => item.group))] : [], students:names.map(item => item.name), time:'刚刚', status:'已发布' });
         dialog.remove(); showToast(shell, `已发布给 ${names.length} 名学生（${subject}）`);
       };
     };
@@ -184,10 +185,11 @@
     renderPublish(); shell.append(dialog);
   }
   function openPublishRecords(shell, state, render, query) {
-    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${(record.classes || ['初二（3）班']).join('、')}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-students="${record.id}">查看学生</button><button class="fx-record-action danger" data-delete="${record.id}">删除</button></td></tr>`).join('');
-    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收班级和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收班级</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
+    const recipientText = record => record.recipientType === 'student' ? record.students.join('、') : (record.classes || ['初二（3）班']).join('、');
+    const rows = state.publishRecords.map(record => `<tr><td class="name"><span class="fx-file-icon">文件</span>${record.file}</td><td>${record.subject}</td><td>${recipientText(record)}</td><td>${record.time}</td><td><span class="fx-publish-status">${record.status}</span></td><td class="op"><button class="fx-record-action" data-recipients="${record.id}">查看${record.recipientType === 'student' ? '学生' : '班级'}</button><button class="fx-record-action danger" data-delete="${record.id}">删除</button></td></tr>`).join('');
+    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">发布记录</strong></div></header><div class="fx-records-intro"><div><h2>发布记录</h2><p>记录每次文件发布的学科、接收对象和发布时间。</p></div><span>共 ${state.publishRecords.length} 条</span></div><table class="fx-files-table fx-records-table"><thead><tr><th class="name">发布文件</th><th>学科</th><th>接收对象</th><th>发布时间</th><th>状态</th><th class="op">操作</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="fx-empty">暂无发布记录</td></tr>'}</tbody></table>`;
     shell.querySelector('[data-back]').onclick = () => render(query);
-    shell.querySelectorAll('[data-students]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.students); if (record) showPublishStudents(shell, record); });
+    shell.querySelectorAll('[data-recipients]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.recipients); if (record) showPublishRecipients(shell, record); });
     shell.querySelectorAll('[data-delete]').forEach(button => button.onclick = () => { const record = state.publishRecords.find(item => item.id === button.dataset.delete); if (record) confirmDeletePublishRecord(shell, state, render, query, record); });
   }
   function confirmDeletePublishRecord(shell, state, render, query, record) {
@@ -197,9 +199,10 @@
     dialog.querySelector('[data-confirm]').onclick = () => { state.publishRecords = state.publishRecords.filter(item => item.id !== record.id); dialog.remove(); openPublishRecords(shell, state, render, query); showToast(shell, '已删除本次发布，学生设备将同步移除文件'); };
     shell.append(dialog);
   }
-  function showPublishStudents(shell, record) {
+  function showPublishRecipients(shell, record) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
-    dialog.innerHTML = `<div class="fx-dialog fx-record-students"><h3>接收学生</h3><p>${record.file} · ${record.subject} · ${record.time}</p><div>${record.students.map(name => `<span>${name}</span>`).join('')}</div><div class="fx-foot"><button class="primary" data-close>知道了</button></div></div>`;
+    const isStudent = record.recipientType === 'student'; const recipients = isStudent ? record.students : record.classes;
+    dialog.innerHTML = `<div class="fx-dialog fx-record-students"><h3>接收${isStudent ? '学生' : '班级'}</h3><p>${record.file} · ${record.subject} · ${record.time}</p><div>${recipients.map(name => `<span>${name}</span>`).join('')}</div><div class="fx-foot"><button class="primary" data-close>知道了</button></div></div>`;
     dialog.querySelector('[data-close]').onclick = () => dialog.remove(); shell.append(dialog);
   }
   function openHomeworkFilePreview(shell, state, render, query, fileId) {
