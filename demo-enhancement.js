@@ -3,7 +3,20 @@
   const markReviewAnchor = (node, id) => { if (!node) return; reviewAnchors.set(id, node); if (reviewEnabled) node.dataset.reviewAnchor = id; else node.removeAttribute('data-review-anchor'); };
   window.FX_SYNC_REVIEW_ANCHORS = enabled => { reviewEnabled = enabled; reviewAnchors.forEach((node, id) => { if (!node.isConnected) return; if (enabled) node.dataset.reviewAnchor = id; else node.removeAttribute('data-review-anchor'); }); };
   const appendStyle = href => { const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; document.head.append(link); };
-  appendStyle('review-switcher.css?v=2026071603'); appendStyle('review-mode.css?v=2026071603');
+  appendStyle('review-switcher.css?v=2026080412'); appendStyle('review-mode.css?v=2026080412');
+  const pageLayoutStyle = document.createElement('style');
+  pageLayoutStyle.textContent = `
+    html,body{min-width:0!important;max-width:100%;overflow-x:hidden}
+    body [style*="min-width: 1212px"]{min-width:0!important;width:100%!important;max-width:100vw!important}
+    @media (max-width: 1600px){
+      [class*="pageContentCards__"]{width:calc(100vw - 244px)!important;max-width:calc(100vw - 244px)!important;margin-left:32px!important;margin-right:32px!important}
+      [class*="pageContentCardsWrapper"]{display:flex!important;width:100%!important;gap:16px!important;justify-content:space-between!important}
+      [class*="pageContentCardItem__"]{flex:1 1 0!important;width:0!important;min-width:0!important;margin-right:0!important}
+    }
+    #fx-review-switcher{top:auto!important;right:24px!important;bottom:24px!important}
+    @media (max-width:640px){#fx-review-switcher{right:12px!important;bottom:12px!important}}
+  `;
+  document.head.append(pageLayoutStyle);
   const switcher = document.createElement('nav'); switcher.id = 'fx-review-switcher'; switcher.setAttribute('aria-label', '模式切换'); document.body.append(switcher);
   const renderSwitcher = () => { switcher.innerHTML = `<button class="${reviewEnabled ? '' : 'active'}" data-demo>演示</button><button class="${reviewEnabled ? 'active' : ''}" data-review>过稿</button>`; switcher.querySelector('[data-demo]').onclick = () => window.FX_SET_REVIEW_MODE(false); switcher.querySelector('[data-review]').onclick = () => window.FX_SET_REVIEW_MODE(true); };
   const loadReviewLayer = () => { if (window.FX_START_REVIEW_MODE) return window.FX_START_REVIEW_MODE(); if (document.querySelector('[data-fx-review-content]')) return; const content = document.createElement('script'); content.dataset.fxReviewContent = '1'; content.src = 'review-content.js?v=2026071603'; content.onload = () => { const mode = document.createElement('script'); mode.src = 'review-mode.js?v=2026071603'; document.body.append(mode); }; document.body.append(content); };
@@ -11,6 +24,13 @@
   addEventListener('popstate', () => window.FX_SET_REVIEW_MODE(new URLSearchParams(location.search).get('review') === '1', false)); renderSwitcher(); if (reviewEnabled) loadReviewLayer();
   const resource = [...document.querySelectorAll('div,button,a')].find(el => el.textContent.trim() === '我的资源' && !el.querySelector('div'));
   if (!resource) return;
+  if (!resource.querySelector('.fx-resource-badge')) {
+    const badge = document.createElement('i');
+    badge.className = 'fx-resource-badge';
+    badge.setAttribute('aria-label', '有待处理消息');
+    badge.title = '有待处理消息';
+    resource.append(badge);
+  }
   let menu;
   const hideMenu = () => { if (menu) menu.remove(); menu = null; };
   const showMenu = () => {
@@ -37,9 +57,10 @@
         { id:'file-3', parentId:'grade-7', name:'09八年级数学上教师用书.pdf', size:'56.3MB', time:'2026.07.07' },
         { id:'file-4', parentId:'grade-7', name:'人教版数学七年级上册教师用书.pdf', size:'17.8MB', time:'2026.07.07' },
         { id:'file-5', parentId:'grade-7', name:'人教版数学七年级下册教师用书.pdf', size:'23.1MB', time:'2026.07.07' },
-        { id:'file-6', parentId:'exam', name:'中考英语听力复习音频.mp3', size:'18.6MB', time:'刚刚', auditStatus:'reviewing' },
-        { id:'file-7', parentId:'exam', name:'中考备考讲座录播.mp4', size:'426.8MB', time:'刚刚', auditStatus:'reviewing' },
-        { id:'file-8', parentId:'exam', name:'中考冲刺课程录音.mp3', size:'22.1MB', time:'刚刚', auditStatus:'failed' }
+        { id:'file-6', parentId:'exam', name:'中考英语听力复习音频.mp3', size:'18.6MB', time:'刚刚' },
+        { id:'file-7', parentId:'exam', name:'中考备考讲座录播.mp4', size:'426.8MB', time:'刚刚' },
+        { id:'file-8', parentId:'exam', name:'中考冲刺课程录音.mp3', size:'22.1MB', time:'刚刚' },
+        { id:'file-9', parentId:'exam', name:'教师备课教案.docx', size:'2.4MB', time:'2026.07.08' }
       ], publishRecords: [
         { id:'publish-1', file:'11九年级数学上教师用书.pdf', subject:'数学', recipientType:'class', classes:['初二（3）班'], students:['张小雨','李明哲','王思涵','陈子轩','周语桐','刘嘉乐'], time:'今天 09:32', status:'已发布' },
         { id:'publish-2', file:'中考英语听力复习音频.mp3', subject:'英语', recipientType:'student', classes:[], students:['陈子轩','周语桐'], time:'昨天 16:18', status:'已发布' },
@@ -50,26 +71,36 @@
     const children = parentId => state.folders.filter(folder => folder.parentId === parentId);
     const files = parentId => state.files.filter(file => file.parentId === parentId);
     const folder = id => state.folders.find(item => item.id === id);
+    const inkScreenExtensions = new Set(['txt','pdf','zip','epub','png','jpeg','mp4','mov','mp3','wav']);
+    const canPublishFile = name => inkScreenExtensions.has((name.split('.').pop() || '').toLowerCase());
     const fileIcon = item => {
       if (/\.(mp3|wav|m4a|aac)$/i.test(item.name)) return '<span class="fx-file-icon audio">音频</span>';
       if (/\.(mp4|mov|avi|mkv)$/i.test(item.name)) return '<span class="fx-file-icon video">视频</span>';
-      return '<span class="fx-file-icon">PDF</span>';
-    };
-    const hasBlockedReview = folderId => {
-      const childIds = new Set([folderId]); let changed = true;
-      while (changed) { changed = false; state.folders.forEach(item => { if (childIds.has(item.parentId) && !childIds.has(item.id)) { childIds.add(item.id); changed = true; } }); }
-      return state.files.some(item => childIds.has(item.parentId) && ['reviewing', 'failed'].includes(item.auditStatus));
+      const ext = (item.name.split('.').pop() || '文件').toUpperCase();
+      return `<span class="fx-file-icon">${ext}</span>`;
     };
     const trail = () => { const result=[]; let item=folder(state.currentId); while(item){ result.unshift(item); item=folder(item.parentId); } return result; };
     function render(query = '') {
-      const currentFolders = children(state.currentId).filter(item => item.name.includes(query));
-      const currentFiles = files(state.currentId).filter(item => item.name.includes(query));
+      const matchScore = (item, keyword) => {
+        if (!keyword) return 0;
+        const name = item.name.toLowerCase(); const queryText = keyword.toLowerCase();
+        if (name === queryText) return 0;
+        if (name.startsWith(queryText)) return 1;
+        return name.includes(queryText) ? 2 : 3;
+      };
+      const orderItems = (items, keyword) => [...items].filter(item => item.name.includes(keyword)).sort((a, b) => {
+        const scoreDiff = matchScore(a, keyword) - matchScore(b, keyword);
+        if (scoreDiff) return scoreDiff;
+        return String(b.time || '').localeCompare(String(a.time || ''));
+      });
+      const currentFolders = orderItems(children(state.currentId), query);
+      const currentFiles = orderItems(files(state.currentId), query);
       const breadcrumb = `<div class="fx-header-crumb"><button class="fx-header-home" data-home>首页</button><span class="fx-header-sep">›</span><button class="fx-header-root" data-root>我的文件</button>${trail().map((item,index) => `<span class="fx-header-sep">›</span>${index === trail().length - 1 ? `<strong class="fx-header-current">${item.name}</strong>` : `<button class="fx-header-jump" data-jump="${item.id}">${item.name}</button>`}`).join('')}</div>`;
       const folderRows = currentFolders.map(item => `<tr class="fx-folder-row" data-enter="${item.id}">${state.manage ? `<td class="select"><input class="fx-check" type="checkbox" data-select="folder:${item.id}" ${state.selected.has(`folder:${item.id}`) ? 'checked' : ''}></td>` : ''}<td class="name"><span class="fx-folder-icon">▰</span>${item.name}</td><td class="uploader fx-dash">—</td><td class="time fx-dash">—</td><td class="size fx-dash">—</td><td class="op"><button class="fx-row-more" data-more-type="folder" data-more-id="${item.id}" aria-label="更多操作">…</button></td></tr>`).join('');
-      const fileRows = currentFiles.map(item => `<tr class="fx-file-row" data-preview="${item.id}">${state.manage ? `<td class="select"><input class="fx-check" type="checkbox" data-select="file:${item.id}" ${state.selected.has(`file:${item.id}`) ? 'checked' : ''}></td>` : ''}<td class="name">${fileIcon(item)}${item.name}${item.auditStatus === 'reviewing' ? '<span class="fx-audit-tag reviewing">审核中</span>' : item.auditStatus === 'failed' ? '<span class="fx-audit-tag failed">审核失败</span>' : ''}</td><td class="uploader">张老师</td><td class="time">${item.time || '刚刚'}</td><td class="size">${item.size}</td><td class="op"><button class="fx-row-more" data-more-type="file" data-more-id="${item.id}" aria-label="更多操作">…</button></td></tr>`).join('');
+      const fileRows = currentFiles.map(item => `<tr class="fx-file-row" data-preview="${item.id}">${state.manage ? `<td class="select"><input class="fx-check" type="checkbox" data-select="file:${item.id}" ${state.selected.has(`file:${item.id}`) ? 'checked' : ''}></td>` : ''}<td class="name">${fileIcon(item)}${item.name}</td><td class="uploader">张老师</td><td class="time">${item.time || '刚刚'}</td><td class="size">${item.size}</td><td class="op"><button class="fx-row-more" data-more-type="file" data-more-id="${item.id}" aria-label="更多操作">…</button></td></tr>`).join('');
       const columns = state.manage ? '<th class="select"></th>' : '';
       const empty = !folderRows && !fileRows ? `<tr><td colspan="${state.manage ? 6 : 5}" class="fx-empty">当前文件夹暂无文件</td></tr>` : '';
-      shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close">← 返回</button>${breadcrumb}<div class="fx-files-actions"><input class="fx-files-search" placeholder="搜索" value="${query}"><button class="fx-file-btn" data-records>发布记录</button><button class="fx-file-btn" data-manage>${state.manage ? '完成' : '☷ 管理'}</button><button class="fx-file-btn" data-new>▣ 新建文件夹</button><button class="fx-file-btn primary" data-upload>↥ 上传文件</button></div></header>${state.manage ? `<div class="fx-manage-bar">已选择 ${state.selected.size} 项</div>` : ''}<table class="fx-files-table"><thead><tr>${columns}<th class="name">文件名</th><th class="uploader">上传者</th><th class="time">更新时间</th><th class="size">大小</th><th class="op">操作</th></tr></thead><tbody>${folderRows}${fileRows}${empty}</tbody></table>`;
+      shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close">← 返回</button>${breadcrumb}<div class="fx-files-actions"><input class="fx-files-search" placeholder="搜索" value="${query}"><button class="fx-file-btn" data-records>发布记录</button><button class="fx-file-btn" data-manage>${state.manage ? '完成' : '☷ 管理'}</button><button class="fx-file-btn" data-new>▣ 新建文件夹</button><button class="fx-file-btn primary" data-upload>↥ 上传文件</button></div></header>${state.manage ? `<div class="fx-manage-bar">已选择 ${state.selected.size} 项</div>` : ''}<table class="fx-files-table"><thead><tr>${columns}<th class="name">文件名</th><th class="uploader">上传者</th><th class="time">上传时间</th><th class="size">大小</th><th class="op">操作</th></tr></thead><tbody>${folderRows}${fileRows}${empty}</tbody></table>`;
       markReviewAnchor(shell.querySelector('.fx-files-head'), 'file-list');
       shell.querySelector('.fx-files-close').onclick = () => { if (state.currentId) { state.currentId = folder(state.currentId)?.parentId ?? null; state.manage = false; render(''); } else { shell.remove(); } };
       shell.querySelector('.fx-files-search').oninput = e => render(e.target.value);
@@ -83,7 +114,7 @@
       shell.querySelectorAll('[data-enter]').forEach(row => row.addEventListener('click', event => { if (!event.target.closest('button,input')) { state.currentId = row.dataset.enter; state.manage=false; render(''); } }));
       shell.querySelectorAll('[data-preview]').forEach(row => row.addEventListener('click', event => { if (!state.manage && !event.target.closest('button,input')) openHomeworkFilePreview(shell, state, render, query, row.dataset.preview); }));
       shell.querySelectorAll('[data-select]').forEach(box => box.addEventListener('change', () => { box.checked ? state.selected.add(box.dataset.select) : state.selected.delete(box.dataset.select); render(query); }));
-      shell.querySelectorAll('[data-more-id]').forEach(button => button.onclick = event => openRowMenu(shell, state, render, query, hasBlockedReview, event, button.dataset.moreType, button.dataset.moreId));
+      shell.querySelectorAll('[data-more-id]').forEach(button => button.onclick = event => openRowMenu(shell, state, render, query, canPublishFile, event, button.dataset.moreType, button.dataset.moreId));
     }
     render(''); document.body.append(shell);
   }
@@ -93,14 +124,15 @@
   }
   function uploadFile(shell, state, render, query) {
     const dialog = document.createElement('div'); dialog.className = 'fx-dialog-mask';
-    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.wav,.m4a,.aac,.mp4,.mov,.avi,.mkv"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
+    dialog.innerHTML = `<div class="fx-dialog fx-upload-modal"><button class="fx-upload-close" data-close aria-label="关闭">×</button><div class="fx-upload-content" data-content></div><input class="fx-upload-input" data-file-input type="file" multiple accept=".txt,.pdf,.zip,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.wav,.m4a,.aac,.mp4,.mov,.avi,.mkv"><input class="fx-upload-input" data-folder-input type="file" multiple webkitdirectory directory></div>`;
     markReviewAnchor(dialog.querySelector('.fx-upload-modal'), 'upload-dialog');
     const content = dialog.querySelector('[data-content]');
     let picked = [], uploading = false, timer;
     const formatSize = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
     const isMedia = file => /^(audio|video)\//.test(file.type || '') || /\.(mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
-    const isSupported = file => /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
+    const isSupported = file => /\.(txt|pdf|zip|epub|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|mp3|wav|m4a|aac|mp4|mov|avi|mkv)$/i.test(file.name);
     const isOversize = file => file.size > (isMedia(file) ? 300 : 100) * 1024 * 1024;
+    const fileFingerprint = file => file.md5 || `${file.name.toLowerCase()}|${file.size}`;
     const groups = () => {
       const map = new Map();
       picked.forEach(file => { const path = file.webkitRelativePath || ''; const group = path.includes('/') ? path.split('/')[0] : ''; if (!map.has(group)) map.set(group, []); map.get(group).push(file); });
@@ -108,11 +140,12 @@
     };
     const renderSelect = () => {
       if (!picked.length) {
-        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-illustration" aria-hidden="true">▰</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">支持文档、图片、音频、视频格式文件，<br>文档、图片单个文件不超过 100MB；音频、视频单个文件不超过 300MB</div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div>`;
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-drop" data-drop><div class="fx-upload-illustration" aria-hidden="true">▰</div><div class="fx-upload-title">拖入文件，或点击下方按钮选择</div><div class="fx-upload-copy">支持文档、图片、音频、视频、ZIP 格式文件，<br>文档、图片单个文件不超过 100MB；音频、视频单个文件不超过 300MB</div><div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div>`;
       } else {
         const supported = picked.filter(file => isSupported(file) && !isOversize(file)), unsupported = picked.length - supported.length;
+        const duplicateCount = picked.length - new Set(picked.map(fileFingerprint)).size;
         const total = picked.reduce((sum, item) => sum + item.size, 0);
-        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-list"><div class="fx-upload-summary"><span>文件 <b>${picked.length}</b></span><i></i><span>文件夹 <b>${groups().filter(([name]) => name).length}</b></span><i></i><span>大小 <b>${formatSize(total)}</b></span>${unsupported ? `<i></i><span class="warning">${unsupported} 个不支持或超出大小限制的文件</span>` : ''}<div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div><div class="fx-upload-tree">${groups().map(([name, items]) => name ? `<div class="fx-tree-folder">⌄ <span>▰</span><b>${name}</b><em>${items.length} 个</em></div>${items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')}` : items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')).join('')}</div></div><button class="fx-upload-start" data-start ${supported.length ? '' : 'disabled'}>开始上传</button>`;
+        content.innerHTML = `<h3>上传文件</h3><p>上传后，资料将保存在当前文件夹。</p><div class="fx-upload-list"><div class="fx-upload-summary"><span>文件 <b>${picked.length}</b></span><i></i><span>文件夹 <b>${groups().filter(([name]) => name).length}</b></span><i></i><span>大小 <b>${formatSize(total)}</b></span>${unsupported ? `<i></i><span class="warning">${unsupported} 个不支持或超出大小限制的文件</span>` : ''}${duplicateCount ? `<i></i><span class="warning">${duplicateCount} 个文件重复，无需重复上传</span>` : ''}<div class="fx-upload-actions"><button data-pick-file>↥ 选择文件</button><button data-pick-folder>⊞ 选择文件夹</button></div></div><div class="fx-upload-tree">${groups().map(([name, items]) => name ? `<div class="fx-tree-folder">⌄ <span>▰</span><b>${name}</b><em>${items.length} 个</em></div>${items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')}` : items.map(file => `<div class="fx-tree-file ${!isSupported(file) || isOversize(file) ? 'invalid' : ''}"><span>${isSupported(file) && !isOversize(file) ? '▤' : '!'}</span>${file.name}<em>${isOversize(file) ? `${formatSize(file.size)} · 超出 ${isMedia(file) ? '300MB' : '100MB'} 限制` : formatSize(file.size)}</em></div>`).join('')).join('')}</div></div><button class="fx-upload-start" data-start ${supported.length ? '' : 'disabled'}>开始上传</button>`;
       }
       bindSelection();
     };
@@ -136,14 +169,14 @@
     };
     const addFiles = list => { const files = Array.from(list || []); if (!files.length) return; picked = [...picked, ...files]; renderSelect(); };
     const finishUpload = () => {
-      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file));
-      uploaded.forEach(file => state.files.push({ id:`file-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, parentId:state.currentId, name:file.name, size:formatSize(file.size), time:'刚刚', auditStatus:'approved' }));
+      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file)).filter((file, index, list) => list.findIndex(item => fileFingerprint(item) === fileFingerprint(file)) === index);
+      uploaded.forEach(file => state.files.push({ id:`file-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, parentId:state.currentId, name:file.name, size:formatSize(file.size), time:'刚刚', md5:fileFingerprint(file) }));
       uploading = false;
       content.innerHTML = `<div class="fx-upload-success"><div class="fx-success-icon">✓</div><h2>导入完成，文件已入库</h2><p>资料已保存到当前文件夹，可继续整理和使用。</p><button class="fx-upload-done" data-done>完成</button></div>`;
       content.querySelector('[data-done]').onclick = () => { dialog.remove(); render(query); showToast(shell, `已上传 ${uploaded.length} 个文件`); };
     };
     const startUpload = () => {
-      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file)); if (!uploaded.length) return;
+      const uploaded = picked.filter(file => isSupported(file) && !isOversize(file)).filter((file, index, list) => list.findIndex(item => fileFingerprint(item) === fileFingerprint(file)) === index); if (!uploaded.length) return;
       uploading = true; let percent = 8;
       const drawProgress = () => {
         const completed = Math.min(uploaded.length, Math.floor(uploaded.length * percent / 100));
@@ -177,8 +210,8 @@
       dialog.querySelector('[data-confirm]').onclick = () => {
         if (!subject || !names.length) return;
         const recipientType = names.length === students.length ? 'class' : 'student';
-        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, subject, recipientType, classes:recipientType === 'class' ? [...new Set(names.map(item => item.group))] : [], students:names.map(item => item.name), time:'刚刚', status:'已发布' });
-        dialog.remove(); showToast(shell, `已发布给 ${names.length} 名学生（${subject}）`);
+        state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, fileNameSnapshot:name, fileTypeSnapshot:(name.split('.').pop() || '').toLowerCase(), subject, recipientType, classes:recipientType === 'class' ? [...new Set(names.map(item => item.group))] : [], students:names.map(item => item.name), recipientSnapshot:names.map(item => ({ name:item.name, group:item.group })), time:'刚刚', status:'已发布' });
+        dialog.remove(); showToast(shell, '发布成功');
       };
     };
     const openStudentPicker = () => {
@@ -226,22 +259,21 @@
     const isAudio = /\.(mp3|wav|m4a|aac)$/i.test(file.name), isVideo = /\.(mp4|mov|avi|mkv)$/i.test(file.name);
     const published = state.publishRecords.filter(item => item.file === file.name);
     const preview = isAudio ? `<div class="fx-media-preview"><div class="fx-media-symbol">♪</div><h2>${file.name}</h2><p>音频文件 · ${file.size}</p><div class="fx-media-wave">▁▃▆█▅▂▇▃</div><button>▶ 播放预览</button></div>` : isVideo ? `<div class="fx-media-preview"><div class="fx-media-symbol">▶</div><h2>${file.name}</h2><p>视频文件 · ${file.size}</p><div class="fx-video-stage">视频预览</div><button>▶ 播放预览</button></div>` : `<div class="fx-doc-preview"><div class="fx-doc-toolbar"><span>第 1 页 / 共 12 页</span><span>${type} 原文件预览</span></div><article><h1>${file.name.replace(/\.[^.]+$/, '')}</h1><p>资料预览</p><h2>一、学习目标</h2><p>本文件用于课堂学习与课后复习，请结合教学进度安排使用。</p><h2>二、核心内容</h2><p>通过例题、知识梳理和练习，帮助学生掌握本节重点内容。</p><ul><li>知识点梳理</li><li>典型例题讲解</li><li>分层练习</li></ul></article></div>`;
-    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">文件预览</strong></div><div class="fx-files-actions"><button class="fx-file-btn" data-records>发布记录${published.length ? ` · ${published.length}` : ''}</button><button class="fx-file-btn" data-publish>发布到墨水屏</button><button class="fx-file-btn primary" data-download>⇩ 下载</button></div></header><main class="fx-homework-preview"><section class="fx-preview-meta"><span class="fx-preview-type">${type}</span><h1>${file.name}</h1><p>上传人：张老师　·　${file.time || '刚刚'}　·　${file.size}</p></section>${preview}</main>`;
+    const canPublish = ['txt','pdf','zip','epub','png','jpeg','mp4','mov','mp3','wav'].includes((file.name.split('.').pop() || '').toLowerCase());
+    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">文件预览</strong></div><div class="fx-files-actions"><button class="fx-file-btn" data-publish ${canPublish ? '' : 'disabled title="当前文件格式暂不支持发布到墨水屏"'}>发布到墨水屏</button><button class="fx-file-btn primary" data-download>⇩ 下载</button></div></header><main class="fx-homework-preview"><section class="fx-preview-meta"><span class="fx-preview-type">${type}</span><h1>${file.name}</h1><p>上传人：张老师　·　上传时间：${file.time || '刚刚'}　·　${file.size}</p></section>${preview}</main>`;
     markReviewAnchor(shell.querySelector('.fx-homework-preview'), 'file-preview');
     shell.querySelector('[data-back]').onclick = () => render(query);
-    shell.querySelector('[data-records]')?.remove();
-    shell.querySelector('[data-publish]').onclick = () => distribute(shell, state, file.name);
+    if (canPublish) shell.querySelector('[data-publish]').onclick = () => distribute(shell, state, file.name);
     shell.querySelector('[data-download]').onclick = () => showToast(shell, `已开始下载 ${file.name}`);
   }
-  function openRowMenu(shell, state, render, query, hasBlockedReview, event, type, id) {
+  function openRowMenu(shell, state, render, query, canPublishFile, event, type, id) {
     document.querySelector('.fx-row-menu')?.remove();
     const rect = event.currentTarget.getBoundingClientRect(); const menu = document.createElement('div');
     const item = type === 'folder' ? state.folders.find(folder => folder.id === id) : state.files.find(file => file.id === id);
     if (!item) return;
-    const reviewBlocked = type === 'folder' ? hasBlockedReview(id) : ['reviewing', 'failed'].includes(item.auditStatus);
-    const canDistribute = type === 'file' && !reviewBlocked;
+    const canDistribute = type === 'file' && canPublishFile(item.name);
     menu.className = 'fx-row-menu'; menu.style.top = `${rect.bottom + 4}px`; menu.style.left = `${rect.right - 172}px`;
-    menu.innerHTML = `${canDistribute ? '<button data-distribute>发布到墨水屏</button><div class="fx-row-menu-divider"></div>' : reviewBlocked && type === 'file' ? '<div class="fx-row-menu-hint">审核未通过，暂不可发布</div><div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
+    menu.innerHTML = `${type === 'file' ? (canDistribute ? '<button data-distribute>发布到墨水屏</button>' : '<button class="disabled" disabled title="当前文件格式暂不支持发布到墨水屏">发布到墨水屏</button>') + '<div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
     menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, state, item.name); });
     menu.querySelector('[data-move]').onclick = () => { menu.remove(); moveItem(shell, state, render, query, type, id); };
     menu.querySelector('[data-rename]').onclick = () => {
