@@ -211,7 +211,7 @@
         if (!subject || !names.length) return;
         const recipientType = names.length === students.length ? 'class' : 'student';
         state.publishRecords.unshift({ id:`publish-${Date.now()}`, file:name, fileNameSnapshot:name, fileTypeSnapshot:(name.split('.').pop() || '').toLowerCase(), subject, recipientType, classes:recipientType === 'class' ? [...new Set(names.map(item => item.group))] : [], students:names.map(item => item.name), recipientSnapshot:names.map(item => ({ name:item.name, group:item.group })), time:'刚刚', status:'已发布' });
-        dialog.remove(); showToast(shell, '发布成功');
+        dialog.remove(); showToast(shell, '发布成功。');
       };
     };
     const openStudentPicker = () => {
@@ -260,7 +260,7 @@
     const published = state.publishRecords.filter(item => item.file === file.name);
     const preview = isAudio ? `<div class="fx-media-preview"><div class="fx-media-symbol">♪</div><h2>${file.name}</h2><p>音频文件 · ${file.size}</p><div class="fx-media-wave">▁▃▆█▅▂▇▃</div><button>▶ 播放预览</button></div>` : isVideo ? `<div class="fx-media-preview"><div class="fx-media-symbol">▶</div><h2>${file.name}</h2><p>视频文件 · ${file.size}</p><div class="fx-video-stage">视频预览</div><button>▶ 播放预览</button></div>` : `<div class="fx-doc-preview"><div class="fx-doc-toolbar"><span>第 1 页 / 共 12 页</span><span>${type} 原文件预览</span></div><article><h1>${file.name.replace(/\.[^.]+$/, '')}</h1><p>资料预览</p><h2>一、学习目标</h2><p>本文件用于课堂学习与课后复习，请结合教学进度安排使用。</p><h2>二、核心内容</h2><p>通过例题、知识梳理和练习，帮助学生掌握本节重点内容。</p><ul><li>知识点梳理</li><li>典型例题讲解</li><li>分层练习</li></ul></article></div>`;
     const canPublish = ['txt','pdf','zip','epub','png','jpeg','mp4','mov','mp3','wav'].includes((file.name.split('.').pop() || '').toLowerCase());
-    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">文件预览</strong></div><div class="fx-files-actions"><button class="fx-file-btn" data-publish ${canPublish ? '' : 'disabled title="当前文件格式暂不支持发布到墨水屏"'}>发布到墨水屏</button><button class="fx-file-btn primary" data-download>⇩ 下载</button></div></header><main class="fx-homework-preview"><section class="fx-preview-meta"><span class="fx-preview-type">${type}</span><h1>${file.name}</h1><p>上传人：张老师　·　上传时间：${file.time || '刚刚'}　·　${file.size}</p></section>${preview}</main>`;
+    shell.innerHTML = `<header class="fx-files-head"><button class="fx-files-close" data-back>← 返回我的文件</button><div class="fx-header-crumb"><strong class="fx-header-current">文件预览</strong></div><div class="fx-files-actions"><button class="fx-file-btn" data-publish ${canPublish ? '' : 'disabled title="当前文件格式暂不支持发布到墨水屏。"'}>发布到墨水屏</button><button class="fx-file-btn primary" data-download>⇩ 下载</button></div></header><main class="fx-homework-preview"><section class="fx-preview-meta"><span class="fx-preview-type">${type}</span><h1>${file.name}</h1><p>上传人：张老师　·　上传时间：${file.time || '刚刚'}　·　${file.size}</p></section>${preview}</main>`;
     markReviewAnchor(shell.querySelector('.fx-homework-preview'), 'file-preview');
     shell.querySelector('[data-back]').onclick = () => render(query);
     if (canPublish) shell.querySelector('[data-publish]').onclick = () => distribute(shell, state, file.name);
@@ -273,7 +273,7 @@
     if (!item) return;
     const canDistribute = type === 'file' && canPublishFile(item.name);
     menu.className = 'fx-row-menu'; menu.style.top = `${rect.bottom + 4}px`; menu.style.left = `${rect.right - 172}px`;
-    menu.innerHTML = `${type === 'file' ? (canDistribute ? '<button data-distribute>发布到墨水屏</button>' : '<button class="disabled" disabled title="当前文件格式暂不支持发布到墨水屏">发布到墨水屏</button>') + '<div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
+    menu.innerHTML = `${type === 'file' ? (canDistribute ? '<button data-distribute>发布到墨水屏</button>' : '<button class="disabled" disabled title="当前文件格式暂不支持发布到墨水屏。">发布到墨水屏</button>') + '<div class="fx-row-menu-divider"></div>' : ''}<button data-move>移动到…</button><button data-rename>重命名</button><div class="fx-row-menu-divider"></div><button class="danger" data-delete>${type === 'folder' ? '删除文件夹' : '删除'}</button>`;
     menu.querySelector('[data-distribute]')?.addEventListener('click', () => { menu.remove(); distribute(shell, state, item.name); });
     menu.querySelector('[data-move]').onclick = () => { menu.remove(); moveItem(shell, state, render, query, type, id); };
     menu.querySelector('[data-rename]').onclick = () => {
